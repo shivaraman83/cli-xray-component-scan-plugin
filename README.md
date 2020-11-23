@@ -41,3 +41,14 @@ None.
 
 ## Release Notes
 The release notes are available [here](RELEASE.md).
+
+
+
+CD into the new repository created.
+Build and test your plugin by running the following commands.
+
+$ cd jfrog-cli-plugin-template
+$ go build -o hello-frog
+$ ./hello-frog --help
+$ ./hello-frog hello --help
+$ ./hello-frog hello Yey!
