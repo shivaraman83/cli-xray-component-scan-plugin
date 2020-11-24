@@ -12,7 +12,7 @@ func main() {
 
 func getApp() components.App {
 	app := components.App{}
-	app.Name = "Xray-Component-Scan"
+	app.Name = "xray-component-scan"
 	app.Description = "Scan packages for vulnerabilities and licensing information"
 	app.Version = "v0.1.0"
 	app.Commands = getCommands()

@@ -39,6 +39,9 @@ type scanConfiguration struct {
 	componentId string
 }
 
+type scanOutput struct {
+}
+
 func scanCmd(c *components.Context) error {
 	if len(c.Arguments) != 1 {
 		return errors.New("Wrong number of arguments. Expected: 1, " + "Received: " + strconv.Itoa(len(c.Arguments)))
@@ -52,9 +55,6 @@ func scanCmd(c *components.Context) error {
 	}
 
 	artAuth, err := artDetails.CreateArtAuthConfig()
-
-	//log.Output(artAuth)
-	//rtDetails, err :=config.NewConfigBuilder().SetServiceDetails(ddtails).SetCertificatesPath(ddtails.GetClientCertPath()).Build()
 
 	url, err := utils.BuildArtifactoryUrl(strings.ReplaceAll(artAuth.GetUrl(), "/artifactory/", "/xray/"),
 		"api/v1/summary/component", nil)
