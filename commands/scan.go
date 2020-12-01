@@ -1,15 +1,19 @@
 package commands
 
 import (
+	"encoding/json"
 	"errors"
+	"fmt"
 	"github.com/jfrog/jfrog-cli-core/plugins/components"
 	"github.com/jfrog/jfrog-cli-core/utils/config"
 	"github.com/jfrog/jfrog-client-go/artifactory/services/utils"
 	"github.com/jfrog/jfrog-client-go/httpclient"
 	clientutils "github.com/jfrog/jfrog-client-go/utils"
+	//"github.com/kr/pretty"
 	"github.com/jfrog/jfrog-client-go/utils/log"
 	"strconv"
 	"strings"
+	//"time"
 )
 
 func ScanPackages() components.Command {
@@ -39,7 +43,43 @@ type scanConfiguration struct {
 	componentId string
 }
 
+//https://mholt.github.io/json-to-go/
+//https://play.golang.org/p/Z3yszFl01L
+//https://www.jfrog.com/confluence/display/JFROG/Xray+REST+API
+
+//./cli-xray-component-scan-plugin scan "deb://debian:buster:curl:7.64.0-4"
+//./cli-xray-component-scan-plugin scan "npm://debug:2.2.0"
+
 type scanOutput struct {
+	Artifacts []struct {
+		General struct {
+			Name        string `json:"name"`
+			PkgType     string `json:"pkg_type"`
+			ComponentID string `json:"component_id"`
+		} `json:"general"`
+		Issues []struct {
+			Summary     string `json:"summary"`
+			Description string `json:"description"`
+			IssueType   string `json:"issue_type"`
+			Severity    string `json:"severity"`
+			Provider    string `json:"provider"`
+			Cves        []struct {
+				Cve    string `json:"cve"`
+				CvssV2 string `json:"cvss_v2"`
+			} `json:"cves"`
+			Created    string `json:"created"`
+			Components []struct {
+				ComponentID   string   `json:"component_id"`
+				FixedVersions []string `json:"fixed_versions"`
+			} `json:"components"`
+		} `json:"issues"`
+		Licenses []struct {
+			Name        string   `json:"name"`
+			FullName    string   `json:"full_name"`
+			MoreInfoURL []string `json:"more_info_url"`
+			Components  []string `json:"components"`
+		} `json:"licenses"`
+	}
 }
 
 func scanCmd(c *components.Context) error {
@@ -73,9 +113,24 @@ func scanCmd(c *components.Context) error {
 
 	_, body, err := client.SendPost(url, []byte("{\"component_details\":[{\"component_id\":\""+conf.componentId+"\"}]}"), httpClientDetails)
 
+	log.Output(clientutils.IndentJson(body))
+
+	var scanData scanOutput
+	err = json.Unmarshal(body, &scanData)
+
+	//data := clientutils.IndentJson(body)
+	//scanOutputJSON := make(map[string][]scanOutput)
+	//err = json.Unmarshal([]byte(data), &scanOutputJSON)
+
 	if err != nil {
 		return err
 	}
-	log.Output(clientutils.IndentJson(body))
+	//fmt.Printf("\n\n Scan Result:::: %+v", scanOutputJSON)
+	for i := range scanData.Artifacts {
+		//fmt.Printf("\n\nScan Result::::%# v", pretty.Formatter(scanData.Artifacts[i].Issues))
+		fmt.Printf("\n\n Scan Result-Vulnerability:::: %+v", scanData.Artifacts[i].Issues)
+		fmt.Printf("\n\n Scan Result-Licensing:::: %+v", scanData.Artifacts[i].Licenses)
+		//fmt.Printf("\n\nScan Result::::%# v", pretty.Formatter(scanData.Artifacts[i].Licenses))
+	}
 	return nil
 }
