@@ -32,6 +32,7 @@ func ScanComponent() components.Command {
 }
 
 func ScanPackages() components.Command {
+	var compNames = []string{"deb://debian:buster:curl:7.64.0-4", "npm://debug:2.2.0", "go://github.com/ulikunitz/xz:0.5.6"}
 	return components.Command{
 		Name:        "scanPackage",
 		Description: "Scans a list of Packages/Components using Xray",
@@ -40,7 +41,7 @@ func ScanPackages() components.Command {
 		//Flags:       ""getHelloFlags""(),
 		//EnvVars:     getHelloEnvVar(),
 		Action: func(c *components.Context) error {
-			return scanPackageList(c)
+			return scanPackageList(compNames)
 		},
 	}
 }
@@ -121,23 +122,17 @@ type scanOutput struct {
 	} `json:"artifacts"`
 }
 
-func scanPackageList(c *components.Context) error {
-
-	//bytes, err := json.Marshal(c.Arguments)
-	var b = []byte(`{"Components":[{"ComponentId":"deb://debian:buster:curl:7.64.0-4"},{"ComponentId":"npm://debug:2.2.0"}]}`)
-	var inputCompJson inputscanJson
-
-	err := json.Unmarshal(b, &inputCompJson)
+func scanPackageList(compNames []string) error {
 
 	var sb strings.Builder
 	var payload strings.Builder
-	for i := range inputCompJson.Components {
-		sb.WriteString("{\"component_id\":\"" + inputCompJson.Components[i].ComponentID + "\"},")
+	for i := range compNames {
+		sb.WriteString("{\"component_id\":\"" + compNames[i] + "\"},")
 	}
 	var payloadComp = strings.TrimSuffix(sb.String(), ",")
 	payload.WriteString("{\"component_details\":[" + payloadComp + "]}")
 
-	fmt.Printf("Payload:::: %+v", payload.String())
+	fmt.Println("Payload:::: %+v", payload.String())
 
 	artAuth, url, client, err := artConf()
 	if err != nil {
@@ -161,16 +156,9 @@ func scanPackageList(c *components.Context) error {
 	if err != nil {
 		return err
 	}
-	//fmt.Printf("\n\n Scan Result:::: %+v", scanOutputJSON)
-	for i := range scanData.Artifacts {
-		issues, error := json.MarshalIndent(scanData.Artifacts[i].Issues, "", " ")
-		fmt.Println("Issues:::: " + string(issues))
-		licenses, error := json.MarshalIndent(scanData.Artifacts[i].Licenses, "", " ")
-		fmt.Println("Licenses:::: " + string(licenses))
-		if error != nil {
-			return error
-		}
-	}
+	printGeneral(scanData)
+	printIssues(scanData)
+	printLicenses(scanData)
 
 	return nil
 }
@@ -199,6 +187,7 @@ func scanCmd(c *components.Context) error {
 	if err != nil {
 		return err
 	}
+	printGeneral(scanData)
 	printIssues(scanData)
 	printLicenses(scanData)
 	return nil
@@ -227,6 +216,17 @@ func printIssues(scanData scanOutput) error {
 	for i := range scanData.Artifacts {
 		issues, error := json.MarshalIndent(scanData.Artifacts[i].Issues, "", " ")
 		fmt.Println("Issues:::: " + string(issues))
+		if error != nil {
+			return error
+		}
+	}
+	return nil
+}
+
+func printGeneral(scanData scanOutput) error {
+	for i := range scanData.Artifacts {
+		general, error := json.MarshalIndent(scanData.Artifacts[i].General, "", " ")
+		fmt.Println("Component Data:::: " + string(general))
 		if error != nil {
 			return error
 		}
