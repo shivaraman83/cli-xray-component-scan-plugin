@@ -34,7 +34,7 @@ func ScanComponent() components.Command {
 func ScanPackages() components.Command {
 	var compNames = []string{"deb://debian:buster:curl:7.64.0-4", "npm://debug:2.2.0", "go://github.com/ulikunitz/xz:0.5.6"}
 	return components.Command{
-		Name:        "scanPackage",
+		Name:        "scanPackages",
 		Description: "Scans a list of Packages/Components using Xray",
 		//Aliases:     []string{"hi"},
 		Arguments: getScanArgumentsJson(),
@@ -42,6 +42,20 @@ func ScanPackages() components.Command {
 		//EnvVars:     getHelloEnvVar(),
 		Action: func(c *components.Context) error {
 			return scanPackageList(compNames)
+		},
+	}
+}
+
+func ScanGitRepo() components.Command {
+	return components.Command{
+		Name:        "scanGitRepo",
+		Description: "Scans components using Xray",
+		//Aliases:     []string{"hi"},
+		Arguments: getScanArguments(),
+		//Flags:       ""getHelloFlags""(),
+		//EnvVars:     getHelloEnvVar(),
+		Action: func(c *components.Context) error {
+			return scanGit(c)
 		},
 	}
 }
@@ -190,6 +204,19 @@ func scanCmd(c *components.Context) error {
 	printGeneral(scanData)
 	printIssues(scanData)
 	printLicenses(scanData)
+	return nil
+}
+
+func scanGit(c *components.Context) error {
+	if len(c.Arguments) != 1 {
+		return errors.New("Wrong number of arguments. Expected: 1, " + "Received: " + strconv.Itoa(len(c.Arguments)))
+	}
+	var conf = new(scanConfiguration)
+	conf.componentId = c.Arguments[0]
+	//Invoke the process to get the list of gomodules
+
+	//After the list of Strings are received, please pass it to scanPackages(compNames []string)
+
 	return nil
 }
 
