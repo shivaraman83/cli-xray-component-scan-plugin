@@ -203,10 +203,10 @@ func scanPackageList(c *components.Context) error {
 			iss := scanData.Artifacts[i].Issues
 			for j := range iss {
 				if iss[j].Severity == "High" {
-					issue, error := json.MarshalIndent(iss[j], "", " ")
+					issue, err := json.MarshalIndent(iss[j], "", " ")
 					fmt.Println("Issue:::: " + string(issue))
-					if error != nil {
-						return error
+					if err != nil {
+						return err
 					}
 				}
 			}
@@ -272,10 +272,10 @@ func scanCmd(c *components.Context) error {
 			iss := scanData.Artifacts[i].Issues
 			for j := range iss {
 				if iss[j].Severity == "High" {
-					issue, error := json.MarshalIndent(iss[j], "", " ")
+					issue, err := json.MarshalIndent(iss[j], "", " ")
 					fmt.Println("Issue:::: " + string(issue))
-					if error != nil {
-						return error
+					if err != nil {
+						return err
 					}
 				}
 			}
@@ -307,28 +307,28 @@ func scanCmd(c *components.Context) error {
 }
 
 func printGeneral(scanData scanOutput, i int) error {
-	general, error := json.MarshalIndent(scanData.Artifacts[i].General, "", " ")
+	general, err := json.MarshalIndent(scanData.Artifacts[i].General, "", " ")
 	fmt.Println("General:::: " + string(general))
-	if error != nil {
-		return error
+	if err != nil {
+		return err
 	}
 	return nil
 }
 
 func printIssues(scanData scanOutput, i int) error {
-	issues, error := json.MarshalIndent(scanData.Artifacts[i].Issues, "", " ")
+	issues, err := json.MarshalIndent(scanData.Artifacts[i].Issues, "", " ")
 	fmt.Println("Issues:::: " + string(issues))
-	if error != nil {
-		return error
+	if err != nil {
+		return err
 	}
 	return nil
 }
 
 func printLicenses(scanData scanOutput, i int) error {
-	licenses, error := json.MarshalIndent(scanData.Artifacts[i].Licenses, "", " ")
+	licenses, err := json.MarshalIndent(scanData.Artifacts[i].Licenses, "", " ")
 	fmt.Println("Licenses:::: " + string(licenses))
-	if error != nil {
-		return error
+	if err != nil {
+		return err
 	}
 	return nil
 }
