@@ -148,6 +148,9 @@ func scanPackageList(c *components.Context) error {
 	conf.vulnFlag = c.GetStringFlagValue("v")
 	conf.licenseFlag = c.GetStringFlagValue("l")
 
+	fmt.Println("LicenseFlag " + conf.licenseFlag)
+	fmt.Println("VulnFlag " + conf.vulnFlag)
+
 	var payloadComp = strings.TrimSuffix(sb.String(), ",")
 	payload.WriteString("{\"component_details\":[" + payloadComp + "]}")
 
@@ -214,7 +217,7 @@ func scanPackageList(c *components.Context) error {
 		}
 	}
 
-	if conf.vulnFlag == "all" {
+	if conf.licenseFlag == "all" {
 		for i := range scanData.Artifacts {
 			err = printLicenses(scanData, i)
 			if err != nil {
@@ -283,7 +286,7 @@ func scanCmd(c *components.Context) error {
 		}
 	}
 
-	if conf.vulnFlag == "all" {
+	if conf.licenseFlag == "all" {
 		for i := range scanData.Artifacts {
 			err = printLicenses(scanData, i)
 			if err != nil {
