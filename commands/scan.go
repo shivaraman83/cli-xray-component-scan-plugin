@@ -210,13 +210,13 @@ func scanCmd(c *components.Context) error {
 }
 
 func scanGit(c *components.Context) error {
-	if len(c.Arguments) != 1 {
-		return errors.New("Wrong number of arguments. Expected: 1, " + "Received: " + strconv.Itoa(len(c.Arguments)))
+	if len(c.Arguments) != 2 {
+		return errors.New("Wrong number of arguments. Expected: 2, " + "Received: " + strconv.Itoa(len(c.Arguments)))
 	}
 	var conf = new(scanConfiguration)
 	conf.componentId = c.Arguments[0]
 	//Invoke the process to get the list of gomodules
-	grepCmd := exec.Command("./magic", "/Users/shimi/go-cache")
+	grepCmd := exec.Command("./magic", c.Arguments[1])
 	grepIn, _ := grepCmd.StdinPipe()
 	grepOut, _ := grepCmd.StdoutPipe()
 	grepCmd.Start()
