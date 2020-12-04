@@ -216,16 +216,17 @@ func scanGit(c *components.Context) error {
 	var conf = new(scanConfiguration)
 	conf.componentId = c.Arguments[0]
 	//Invoke the process to get the list of gomodules
-	grepCmd := exec.Command("grep", "hello")
+	grepCmd := exec.Command("./magic", "/Users/shimi/go-cache")
 	grepIn, _ := grepCmd.StdinPipe()
 	grepOut, _ := grepCmd.StdoutPipe()
 	grepCmd.Start()
-	grepIn.Write([]byte("hello grep\ngoodbye grep"))
+	grepIn.Write([]byte(c.Arguments[0]))
 	grepIn.Close()
 	grepBytes, _ := ioutil.ReadAll(grepOut)
 	grepCmd.Wait()
 	//After the list of Strings are received, please pass it to scanPackages(compNames []string)
-	fmt.Println(grepBytes)
+	result := string(grepBytes)
+	scanPackageList(strings.Split(strings.TrimSuffix(result, "\n"),"\n"))
 	return nil
 }
 
