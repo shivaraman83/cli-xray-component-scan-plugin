@@ -18,6 +18,7 @@ import (
 )
 
 const ServerIdFlag = "server-id"
+const vulnFlag = "v"
 
 func ScanComponent() components.Command {
 	return components.Command{
@@ -25,7 +26,7 @@ func ScanComponent() components.Command {
 		Description: "Scans components using Xray",
 		Aliases:     []string{"s"},
 		Arguments:   getScanArguments(),
-		//Flags:       ""getHelloFlags""(),
+		//Flags:       getScanFlags(),
 		//EnvVars:     getHelloEnvVar(),
 		Action: func(c *components.Context) error {
 			return scanCmd(c)
@@ -61,6 +62,16 @@ func ScanGitRepo() components.Command {
 		},
 	}
 }
+
+//func getScanFlags() []components.Flag {
+//	return []components.Flag{
+//		components.StringFlag{
+//			Name: diffFlag,
+//			Description: "A build number to show diff with. " +
+//				"Renders the table to show difference in artifacts, dependencies and properties with the provided build number.",
+//		},
+//	}
+//}
 
 type scanConfiguration struct {
 	componentId string
