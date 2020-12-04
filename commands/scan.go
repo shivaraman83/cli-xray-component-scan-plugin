@@ -18,7 +18,8 @@ import (
 )
 
 const ServerIdFlag = "server-id"
-const vulnFlag = "v"
+const scanVulnFlag = "v"
+const scanLicenseFlag = "l"
 
 func ScanComponent() components.Command {
 	return components.Command{
@@ -26,7 +27,7 @@ func ScanComponent() components.Command {
 		Description: "Scans components using Xray",
 		Aliases:     []string{"s"},
 		Arguments:   getScanArguments(),
-		//Flags:       getScanFlags(),
+		Flags:       getScanFlags(),
 		//EnvVars:     getHelloEnvVar(),
 		Action: func(c *components.Context) error {
 			return scanCmd(c)
@@ -63,15 +64,18 @@ func ScanGitRepo() components.Command {
 	}
 }
 
-//func getScanFlags() []components.Flag {
-//	return []components.Flag{
-//		components.StringFlag{
-//			Name: diffFlag,
-//			Description: "A build number to show diff with. " +
-//				"Renders the table to show difference in artifacts, dependencies and properties with the provided build number.",
-//		},
-//	}
-//}
+func getScanFlags() []components.Flag {
+	return []components.Flag{
+		components.StringFlag{
+			Name:        scanVulnFlag,
+			Description: "If we need to show only vulnerability ",
+		},
+		components.StringFlag{
+			Name:        scanLicenseFlag,
+			Description: "If we need to show only vulnerability ",
+		},
+	}
+}
 
 type scanConfiguration struct {
 	componentId string
@@ -166,9 +170,14 @@ func scanPackageList(c *components.Context) error {
 	if err != nil {
 		return err
 	}
-	printGeneral(scanData)
-	printIssues(scanData)
-	printLicenses(scanData)
+	for i := range scanData.Artifacts {
+		err := printGeneral(scanData, i)
+		err = printIssues(scanData, i)
+		err = printLicenses(scanData, i)
+		if err != nil {
+			return err
+		}
+	}
 
 	return nil
 }
@@ -202,9 +211,42 @@ func scanCmd(c *components.Context) error {
 	if err != nil {
 		return err
 	}
-	printGeneral(scanData)
-	printIssues(scanData)
-	printLicenses(scanData)
+
+	for i := range scanData.Artifacts {
+		err := printGeneral(scanData, i)
+		err = printIssues(scanData, i)
+		err = printLicenses(scanData, i)
+		if err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func printGeneral(scanData scanOutput, i int) error {
+	general, error := json.MarshalIndent(scanData.Artifacts[i].General, "", " ")
+	fmt.Println("General:::: " + string(general))
+	if error != nil {
+		return error
+	}
+	return nil
+}
+
+func printIssues(scanData scanOutput, i int) error {
+	issues, error := json.MarshalIndent(scanData.Artifacts[i].Issues, "", " ")
+	fmt.Println("Issues:::: " + string(issues))
+	if error != nil {
+		return error
+	}
+	return nil
+}
+
+func printLicenses(scanData scanOutput, i int) error {
+	licenses, error := json.MarshalIndent(scanData.Artifacts[i].Licenses, "", " ")
+	fmt.Println("Licenses:::: " + string(licenses))
+	if error != nil {
+		return error
+	}
 	return nil
 }
 
@@ -224,39 +266,6 @@ func scanGit(c *components.Context) error {
 
 	//After the list of Strings are received, please pass it to scanPackages(compNames []string)
 
-	return nil
-}
-
-func printIssues(scanData scanOutput) error {
-	for i := range scanData.Artifacts {
-		issues, error := json.MarshalIndent(scanData.Artifacts[i].Issues, "", " ")
-		fmt.Println("Issues:::: " + string(issues))
-		if error != nil {
-			return error
-		}
-	}
-	return nil
-}
-
-func printGeneral(scanData scanOutput) error {
-	for i := range scanData.Artifacts {
-		general, error := json.MarshalIndent(scanData.Artifacts[i].General, "", " ")
-		fmt.Println("Component Data:::: " + string(general))
-		if error != nil {
-			return error
-		}
-	}
-	return nil
-}
-
-func printLicenses(scanData scanOutput) error {
-	for i := range scanData.Artifacts {
-		licenses, error := json.MarshalIndent(scanData.Artifacts[i].Licenses, "", " ")
-		fmt.Println("Licenses:::: " + string(licenses))
-		if error != nil {
-			return error
-		}
-	}
 	return nil
 }
 
