@@ -126,7 +126,7 @@ func scanPackageList(c *components.Context) error {
 	var payloadComp = strings.TrimSuffix(sb.String(), ",")
 	payload.WriteString("{\"component_details\":[" + payloadComp + "]}")
 
-	fmt.Println("Payload:::: %+v", payload.String())
+	fmt.Println("Payload::::", payload.String())
 
 	artAuth, url, client, err := artConf()
 	if err != nil {
