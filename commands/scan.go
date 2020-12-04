@@ -4,10 +4,10 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/jfrog/jfrog-cli-core/artifactory/commands"
 	"github.com/jfrog/jfrog-cli-core/plugins/components"
 	"github.com/jfrog/jfrog-cli-core/utils/config"
 	"github.com/jfrog/jfrog-client-go/artifactory/services/utils"
-	"github.com/jfrog/jfrog-client-go/auth"
 	"github.com/jfrog/jfrog-client-go/httpclient"
 	clientutils "github.com/jfrog/jfrog-client-go/utils"
 	//"github.com/kr/pretty"
@@ -16,6 +16,8 @@ import (
 	"strings"
 	//"time"
 )
+
+const ServerIdFlag = "server-id"
 
 func ScanComponent() components.Command {
 	return components.Command{
@@ -128,7 +130,10 @@ func scanPackageList(c *components.Context) error {
 
 	fmt.Println("Payload::::", payload.String())
 
-	artAuth, url, client, err := artConf()
+	rtDetails, err := GetRtDetails(c)
+	url := getXrayRestAPIUrl(err, rtDetails)
+	artAuth, err := rtDetails.CreateArtAuthConfig()
+	client, err := httpclient.ClientBuilder().Build()
 	if err != nil {
 		return err
 	}
@@ -165,7 +170,10 @@ func scanCmd(c *components.Context) error {
 	var conf = new(scanConfiguration)
 	conf.componentId = c.Arguments[0]
 
-	artAuth, url, client, err := artConf()
+	rtDetails, err := GetRtDetails(c)
+	url := getXrayRestAPIUrl(err, rtDetails)
+	artAuth, err := rtDetails.CreateArtAuthConfig()
+	client, err := httpclient.ClientBuilder().Build()
 	if err != nil {
 		return err
 	}
@@ -173,8 +181,9 @@ func scanCmd(c *components.Context) error {
 	httpClientDetails.Headers = map[string]string{
 		"Content-Type": "application/json",
 	}
+	var payload = "{\"component_details\":[{\"component_id\":\"" + conf.componentId + "\"}]}"
 
-	_, body, err := client.SendPost(url, []byte("{\"component_details\":[{\"component_id\":\""+conf.componentId+"\"}]}"), httpClientDetails)
+	_, body, err := client.SendPost(url, []byte(payload), httpClientDetails)
 
 	var scanData scanOutput
 	err = json.Unmarshal(body, &scanData)
@@ -188,6 +197,12 @@ func scanCmd(c *components.Context) error {
 	return nil
 }
 
+func getXrayRestAPIUrl(err error, rtDetails *config.ArtifactoryDetails) string {
+	url, err := utils.BuildArtifactoryUrl(strings.ReplaceAll(rtDetails.GetUrl(), "/artifactory/", "/xray/"),
+		"api/v1/summary/component", nil)
+	return url
+}
+
 func scanGit(c *components.Context) error {
 	if len(c.Arguments) != 1 {
 		return errors.New("Wrong number of arguments. Expected: 1, " + "Received: " + strconv.Itoa(len(c.Arguments)))
@@ -199,25 +214,6 @@ func scanGit(c *components.Context) error {
 	//After the list of Strings are received, please pass it to scanPackages(compNames []string)
 
 	return nil
-}
-
-func artConf() (auth.ServiceDetails, string, *httpclient.HttpClient, error) {
-	artDetails, err := config.GetArtifactorySpecificConfig("", true, true)
-	if err != nil {
-		return nil, "", nil, err
-	}
-	artAuth, err := artDetails.CreateArtAuthConfig()
-
-	url, err := utils.BuildArtifactoryUrl(strings.ReplaceAll(artAuth.GetUrl(), "/artifactory/", "/xray/"),
-		"api/v1/summary/component", nil)
-	if err != nil {
-		return nil, "", nil, err
-	}
-	client, err := httpclient.ClientBuilder().Build()
-	if err != nil {
-		return nil, "", nil, err
-	}
-	return artAuth, url, client, nil
 }
 
 func printIssues(scanData scanOutput) error {
@@ -251,4 +247,21 @@ func printLicenses(scanData scanOutput) error {
 		}
 	}
 	return nil
+}
+
+func GetRtDetails(c *components.Context) (*config.ArtifactoryDetails, error) {
+	serverId := c.GetStringFlagValue(ServerIdFlag)
+	details, err := commands.GetConfig(serverId, false)
+	if err != nil {
+		return nil, err
+	}
+	if details.Url == "" {
+		return nil, errors.New("no server-id was found, or the server-id has no url")
+	}
+	details.Url = clientutils.AddTrailingSlashIfNeeded(details.Url)
+	err = config.CreateInitialRefreshableTokensIfNeeded(details)
+	if err != nil {
+		return nil, err
+	}
+	return details, nil
 }
