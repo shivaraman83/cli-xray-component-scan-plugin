@@ -18,8 +18,6 @@ import (
 )
 
 const ServerIdFlag = "server-id"
-const scanVulnFlag = "v"
-const scanLicenseFlag = "l"
 
 func ScanComponent() components.Command {
 	return components.Command{
@@ -42,7 +40,7 @@ func ScanPackages() components.Command {
 		Description: "Scans a list of Packages/Components using Xray",
 		//Aliases:     []string{"hi"},
 		Arguments: getScanArguments(),
-		//Flags:       ""getHelloFlags""(),
+		Flags:     getScanFlags(),
 		//EnvVars:     getHelloEnvVar(),
 		Action: func(c *components.Context) error {
 			return scanPackageList(c)
@@ -67,18 +65,22 @@ func ScanGitRepo() components.Command {
 func getScanFlags() []components.Flag {
 	return []components.Flag{
 		components.StringFlag{
-			Name:        scanVulnFlag,
-			Description: "If we need to show only vulnerability ",
+			Name: "v",
+			Description: "\"high\" If you need only high vulnernability information " +
+				"\"all\" for all the vulnerability information",
 		},
 		components.StringFlag{
-			Name:        scanLicenseFlag,
-			Description: "If we need to show only vulnerability ",
+			Name:        "l",
+			Description: "To fetch all the license information ",
 		},
 	}
+
 }
 
 type scanConfiguration struct {
 	componentId string
+	vulnFlag    string
+	licenseFlag string
 }
 
 func getScanArguments() []components.Argument {
@@ -140,6 +142,12 @@ func scanPackageList(c *components.Context) error {
 	for _, element := range c.Arguments {
 		sb.WriteString("{\"component_id\":\"" + element + "\"},")
 	}
+
+	var conf = new(scanConfiguration)
+	conf.componentId = c.Arguments[0]
+	conf.vulnFlag = c.GetStringFlagValue("v")
+	conf.licenseFlag = c.GetStringFlagValue("l")
+
 	var payloadComp = strings.TrimSuffix(sb.String(), ",")
 	payload.WriteString("{\"component_details\":[" + payloadComp + "]}")
 
@@ -170,12 +178,48 @@ func scanPackageList(c *components.Context) error {
 	if err != nil {
 		return err
 	}
-	for i := range scanData.Artifacts {
-		err := printGeneral(scanData, i)
-		err = printIssues(scanData, i)
-		err = printLicenses(scanData, i)
-		if err != nil {
-			return err
+	if conf.licenseFlag == "" && conf.vulnFlag == "" {
+		for i := range scanData.Artifacts {
+			err := printGeneral(scanData, i)
+			err = printIssues(scanData, i)
+			err = printLicenses(scanData, i)
+			if err != nil {
+				return err
+			}
+		}
+	}
+
+	if conf.vulnFlag == "all" {
+		for i := range scanData.Artifacts {
+			err = printIssues(scanData, i)
+			if err != nil {
+				return err
+			}
+		}
+	}
+
+	if conf.vulnFlag == "high" {
+		for i := range scanData.Artifacts {
+			iss := scanData.Artifacts[i].Issues
+			for j := range iss {
+				if iss[j].Severity == "High" {
+					issue, error := json.MarshalIndent(iss[j], "", " ")
+					fmt.Println("Issue:::: " + string(issue))
+					if error != nil {
+						return error
+					}
+				}
+			}
+
+		}
+	}
+
+	if conf.vulnFlag == "all" {
+		for i := range scanData.Artifacts {
+			err = printLicenses(scanData, i)
+			if err != nil {
+				return err
+			}
 		}
 	}
 
@@ -189,9 +233,8 @@ func scanCmd(c *components.Context) error {
 	}
 	var conf = new(scanConfiguration)
 	conf.componentId = c.Arguments[0]
-
-	flag := c.GetStringFlagValue(scanVulnFlag)
-	fmt.Println("Flag " + flag)
+	conf.vulnFlag = c.GetStringFlagValue("v")
+	conf.licenseFlag = c.GetStringFlagValue("l")
 
 	rtDetails, err := GetRtDetails(c)
 	url := getXrayRestAPIUrl(err, rtDetails)
@@ -215,15 +258,52 @@ func scanCmd(c *components.Context) error {
 		return err
 	}
 
-	for i := range scanData.Artifacts {
-		err := printGeneral(scanData, i)
-		err = printIssues(scanData, i)
-		err = printLicenses(scanData, i)
-		if err != nil {
-			return err
+	if conf.vulnFlag == "all" {
+		for i := range scanData.Artifacts {
+			err = printIssues(scanData, i)
+			if err != nil {
+				return err
+			}
+		}
+	}
+
+	if conf.vulnFlag == "high" {
+		for i := range scanData.Artifacts {
+			iss := scanData.Artifacts[i].Issues
+			for j := range iss {
+				if iss[j].Severity == "High" {
+					issue, error := json.MarshalIndent(iss[j], "", " ")
+					fmt.Println("Issue:::: " + string(issue))
+					if error != nil {
+						return error
+					}
+				}
+			}
+
+		}
+	}
+
+	if conf.vulnFlag == "all" {
+		for i := range scanData.Artifacts {
+			err = printLicenses(scanData, i)
+			if err != nil {
+				return err
+			}
+		}
+	}
+
+	if conf.licenseFlag == "" && conf.vulnFlag == "" {
+		for i := range scanData.Artifacts {
+			err := printGeneral(scanData, i)
+			err = printIssues(scanData, i)
+			err = printLicenses(scanData, i)
+			if err != nil {
+				return err
+			}
 		}
 	}
 	return nil
+
 }
 
 func printGeneral(scanData scanOutput, i int) error {
