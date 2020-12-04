@@ -10,6 +10,8 @@ import (
 	"github.com/jfrog/jfrog-client-go/auth"
 	"github.com/jfrog/jfrog-client-go/httpclient"
 	clientutils "github.com/jfrog/jfrog-client-go/utils"
+	"io/ioutil"
+	"os/exec"
 	//"github.com/kr/pretty"
 	//"github.com/jfrog/jfrog-client-go/utils/log"
 	"strconv"
@@ -214,9 +216,16 @@ func scanGit(c *components.Context) error {
 	var conf = new(scanConfiguration)
 	conf.componentId = c.Arguments[0]
 	//Invoke the process to get the list of gomodules
-
+	grepCmd := exec.Command("grep", "hello")
+	grepIn, _ := grepCmd.StdinPipe()
+	grepOut, _ := grepCmd.StdoutPipe()
+	grepCmd.Start()
+	grepIn.Write([]byte("hello grep\ngoodbye grep"))
+	grepIn.Close()
+	grepBytes, _ := ioutil.ReadAll(grepOut)
+	grepCmd.Wait()
 	//After the list of Strings are received, please pass it to scanPackages(compNames []string)
-
+	fmt.Println(grepBytes)
 	return nil
 }
 
