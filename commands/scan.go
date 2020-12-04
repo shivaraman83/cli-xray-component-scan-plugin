@@ -21,8 +21,8 @@ func ScanComponent() components.Command {
 	return components.Command{
 		Name:        "scan",
 		Description: "Scans components using Xray",
-		//Aliases:     []string{"hi"},
-		Arguments: getScanArguments(),
+		Aliases:     []string{"s"},
+		Arguments:   getScanArguments(),
 		//Flags:       ""getHelloFlags""(),
 		//EnvVars:     getHelloEnvVar(),
 		Action: func(c *components.Context) error {
@@ -32,16 +32,16 @@ func ScanComponent() components.Command {
 }
 
 func ScanPackages() components.Command {
-	var compNames = []string{"deb://debian:buster:curl:7.64.0-4", "npm://debug:2.2.0", "go://github.com/ulikunitz/xz:0.5.6"}
+	//var compNames = []string{"deb://debian:buster:curl:7.64.0-4", "npm://debug:2.2.0", "go://github.com/ulikunitz/xz:0.5.6"}
 	return components.Command{
 		Name:        "scanPackages",
 		Description: "Scans a list of Packages/Components using Xray",
 		//Aliases:     []string{"hi"},
-		Arguments: getScanArgumentsJson(),
+		Arguments: getScanArguments(),
 		//Flags:       ""getHelloFlags""(),
 		//EnvVars:     getHelloEnvVar(),
 		Action: func(c *components.Context) error {
-			return scanPackageList(compNames)
+			return scanPackageList(c)
 		},
 	}
 }
@@ -60,12 +60,6 @@ func ScanGitRepo() components.Command {
 	}
 }
 
-type inputscanJson struct {
-	Components []struct {
-		ComponentID string `json:"ComponentId"`
-	} `json:"Components"`
-}
-
 type scanConfiguration struct {
 	componentId string
 }
@@ -73,27 +67,10 @@ type scanConfiguration struct {
 func getScanArguments() []components.Argument {
 	return []components.Argument{
 		{
-			Name: "Component Name",
+			Name:        "Component Name",
+			Description: "Name of the component which Xray has to scan",
 		},
 	}
-}
-
-func getScanArgumentsJson() []components.Argument {
-	return []components.Argument{
-		{
-			Name: "Component Name",
-		},
-	}
-}
-
-/*func getScanArgumentsJson(array []compNames) {
-	for i := 0; i < len(array); i++ {
-		fmt.Println(array[i].componentName)
-	}
-}*/
-
-type compNames struct {
-	componentName string
 }
 
 //https://mholt.github.io/json-to-go/
@@ -136,12 +113,15 @@ type scanOutput struct {
 	} `json:"artifacts"`
 }
 
-func scanPackageList(compNames []string) error {
+func scanPackageList(c *components.Context) error {
 
+	if len(c.Arguments) == 0 {
+		return errors.New("Wrong number of arguments. Expected: String array, " + "Received: " + strconv.Itoa(len(c.Arguments)))
+	}
 	var sb strings.Builder
 	var payload strings.Builder
-	for i := range compNames {
-		sb.WriteString("{\"component_id\":\"" + compNames[i] + "\"},")
+	for _, element := range c.Arguments {
+		sb.WriteString("{\"component_id\":\"" + element + "\"},")
 	}
 	var payloadComp = strings.TrimSuffix(sb.String(), ",")
 	payload.WriteString("{\"component_details\":[" + payloadComp + "]}")
@@ -178,6 +158,7 @@ func scanPackageList(compNames []string) error {
 }
 
 func scanCmd(c *components.Context) error {
+
 	if len(c.Arguments) != 1 {
 		return errors.New("Wrong number of arguments. Expected: 1, " + "Received: " + strconv.Itoa(len(c.Arguments)))
 	}
@@ -271,124 +252,3 @@ func printLicenses(scanData scanOutput) error {
 	}
 	return nil
 }
-
-/*func scanPackageList(c *components.Context) error {
-
-	//bytes, err := json.Marshal(c.Arguments)
-	var b = []byte(`{"Components":[{"ComponentId":"deb://debian:buster:curl:7.64.0-4"},{"ComponentId":"npm://debug:2.2.0"}]}`)
-	var inputCompJson inputscanJson
-
-	err := json.Unmarshal(b, &inputCompJson)
-
-	var sb strings.Builder
-	var payload strings.Builder
-	for i := range inputCompJson.Components {
-		sb.WriteString("{\"component_id\":\"" + inputCompJson.Components[i].ComponentID + "\"},")
-	}
-	var payloadComp = strings.TrimSuffix(sb.String(), ",")
-	payload.WriteString("{\"component_details\":[" + payloadComp + "]}")
-
-	fmt.Printf("Payload:::: %+v", payload.String())
-
-	artDetails, err := config.GetArtifactorySpecificConfig("", true, true)
-	if err != nil {
-		return err
-	}
-
-	artAuth, err := artDetails.CreateArtAuthConfig()
-
-	url, err := utils.BuildArtifactoryUrl(strings.ReplaceAll(artAuth.GetUrl(), "/artifactory/", "/xray/"),
-		"api/v1/summary/component", nil)
-	if err != nil {
-		return err
-	}
-	httpClientDetails := artAuth.CreateHttpClientDetails()
-
-	client, err := httpclient.ClientBuilder().Build()
-	if err != nil {
-		return err
-	}
-	httpClientDetails.Headers = map[string]string{
-		"Content-Type": "application/json",
-	}
-
-	_, body, err := client.SendPost(url, []byte(payload.String()), httpClientDetails)
-
-	var scanData scanOutput
-	err = json.Unmarshal(body, &scanData)
-
-	data := clientutils.IndentJson(body)
-	scanOutputJSON := make(map[string][]scanOutput)
-	err = json.Unmarshal([]byte(data), &scanOutputJSON)
-
-	log.Output(clientutils.IndentJson(body))
-	if err != nil {
-		return err
-	}
-	//fmt.Printf("\n\n Scan Result:::: %+v", scanOutputJSON)
-	for i := range scanData.Artifacts {
-		fmt.Printf("\n\nScan Result::::%# v", pretty.Formatter(scanData.Artifacts[i].Issues))
-		//fmt.Printf("\n\n Scan Result-Vulnerability:::: %+v", scanData.Artifacts[i].Issues)
-		//fmt.Printf("\n\n Scan Result-Licensing:::: %+v", scanData.Artifacts[i].Licenses)
-		fmt.Printf("\n\nScan Result::::%# v", pretty.Formatter(scanData.Artifacts[i].Licenses))
-	}
-
-	return nil
-}*/
-
-/*
-func scanCmd(c *components.Context) error {
-	if len(c.Arguments) != 1 {
-		return errors.New("Wrong number of arguments. Expected: 1, " + "Received: " + strconv.Itoa(len(c.Arguments)))
-	}
-	var conf = new(scanConfiguration)
-	conf.componentId = c.Arguments[0]
-
-	artDetails, err := config.GetArtifactorySpecificConfig("", true, true)
-	if err != nil {
-		return err
-	}
-
-	artAuth, err := artDetails.CreateArtAuthConfig()
-
-	url, err := utils.BuildArtifactoryUrl(strings.ReplaceAll(artAuth.GetUrl(), "/artifactory/", "/xray/"),
-		"api/v1/summary/component", nil)
-	if err != nil {
-		return err
-	}
-	httpClientDetails := artAuth.CreateHttpClientDetails()
-
-	client, err := httpclient.ClientBuilder().Build()
-	if err != nil {
-		return err
-	}
-	httpClientDetails.Headers = map[string]string{
-		"Content-Type": "application/json",
-	}
-
-	_, body, err := client.SendPost(url, []byte("{\"component_details\":[{\"component_id\":\""+conf.componentId+"\"}]}"), httpClientDetails)
-
-	//log.Output(clientutils.IndentJson(body))
-
-	var scanData scanOutput
-	err = json.Unmarshal(body, &scanData)
-
-	//data := clientutils.IndentJson(body)
-	//scanOutputJSON := make(map[string][]scanOutput)
-	//err = json.Unmarshal([]byte(data), &scanOutputJSON)
-
-
-	if err != nil {
-		return err
-	}
-	for i := range scanData.Artifacts {
-		issues, error := json.MarshalIndent(scanData.Artifacts[i].Issues,"", " ")
-		fmt.Println("Issues:::: "+ string(issues))
-		licenses, error := json.MarshalIndent(scanData.Artifacts[i].Licenses,"", " ")
-		fmt.Println("Licenses:::: "+ string(licenses))
-		if error != nil {
-			return error
-		}
-	}
-	return nil
-}*/
