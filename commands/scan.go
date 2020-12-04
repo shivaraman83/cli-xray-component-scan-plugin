@@ -190,6 +190,9 @@ func scanCmd(c *components.Context) error {
 	var conf = new(scanConfiguration)
 	conf.componentId = c.Arguments[0]
 
+	flag := c.GetStringFlagValue(scanVulnFlag)
+	fmt.Println("Flag " + flag)
+
 	rtDetails, err := GetRtDetails(c)
 	url := getXrayRestAPIUrl(err, rtDetails)
 	artAuth, err := rtDetails.CreateArtAuthConfig()
@@ -264,7 +267,7 @@ func scanGit(c *components.Context) error {
 	conf.componentId = c.Arguments[0]
 	//Invoke the process to get the list of gomodules
 
-	//After the list of Strings are received, please pass it to scanPackages(compNames []string)
+	//After the list of Strings are received, please pass it to scanPackages( []string)
 
 	return nil
 }
