@@ -56,7 +56,7 @@ func ScanGitRepo() components.Command {
 		Description: "Scans components using Xray",
 		//Aliases:     []string{"hi"},
 		Arguments: getScanArguments(),
-		//Flags:       ""getHelloFlags""(),
+		Flags:     getScanFlags(),
 		//EnvVars:     getHelloEnvVar(),
 		Action: func(c *components.Context) error {
 			return scanGit(c)
