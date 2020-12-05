@@ -4,10 +4,10 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/jfrog/jfrog-cli-core/artifactory/commands"
 	"github.com/jfrog/jfrog-cli-core/plugins/components"
 	"github.com/jfrog/jfrog-cli-core/utils/config"
 	"github.com/jfrog/jfrog-client-go/artifactory/services/utils"
-	"github.com/jfrog/jfrog-client-go/auth"
 	"github.com/jfrog/jfrog-client-go/httpclient"
 	clientutils "github.com/jfrog/jfrog-client-go/utils"
 	"io/ioutil"
@@ -19,13 +19,15 @@ import (
 	//"time"
 )
 
+const ServerIdFlag = "server-id"
+
 func ScanComponent() components.Command {
 	return components.Command{
 		Name:        "scan",
 		Description: "Scans components using Xray",
-		//Aliases:     []string{"hi"},
-		Arguments: getScanArguments(),
-		//Flags:       ""getHelloFlags""(),
+		Aliases:     []string{"s"},
+		Arguments:   getScanArguments(),
+		Flags:       getScanFlags(),
 		//EnvVars:     getHelloEnvVar(),
 		Action: func(c *components.Context) error {
 			return scanCmd(c)
@@ -34,16 +36,16 @@ func ScanComponent() components.Command {
 }
 
 func ScanPackages() components.Command {
-	var compNames = []string{"deb://debian:buster:curl:7.64.0-4", "npm://debug:2.2.0", "go://github.com/ulikunitz/xz:0.5.6"}
+	//var compNames = []string{"deb://debian:buster:curl:7.64.0-4", "npm://debug:2.2.0", "go://github.com/ulikunitz/xz:0.5.6"}
 	return components.Command{
 		Name:        "scanPackages",
 		Description: "Scans a list of Packages/Components using Xray",
 		//Aliases:     []string{"hi"},
-		Arguments: getScanArgumentsJson(),
-		//Flags:       ""getHelloFlags""(),
+		Arguments: getScanArguments(),
+		Flags:     getScanFlags(),
 		//EnvVars:     getHelloEnvVar(),
 		Action: func(c *components.Context) error {
-			return scanPackageList(compNames)
+			return scanPackageList(c)
 		},
 	}
 }
@@ -62,40 +64,34 @@ func ScanGitRepo() components.Command {
 	}
 }
 
-type inputscanJson struct {
-	Components []struct {
-		ComponentID string `json:"ComponentId"`
-	} `json:"Components"`
+func getScanFlags() []components.Flag {
+	return []components.Flag{
+		components.StringFlag{
+			Name: "v",
+			Description: "\"high\" If you need only high vulnernability information " +
+				"\"all\" for all the vulnerability information",
+		},
+		components.StringFlag{
+			Name:        "l",
+			Description: "To fetch all the license information ",
+		},
+	}
+
 }
 
 type scanConfiguration struct {
 	componentId string
+	vulnFlag    string
+	licenseFlag string
 }
 
 func getScanArguments() []components.Argument {
 	return []components.Argument{
 		{
-			Name: "Component Name",
+			Name:        "Component Name",
+			Description: "Name of the component which Xray has to scan",
 		},
 	}
-}
-
-func getScanArgumentsJson() []components.Argument {
-	return []components.Argument{
-		{
-			Name: "Component Name",
-		},
-	}
-}
-
-/*func getScanArgumentsJson(array []compNames) {
-	for i := 0; i < len(array); i++ {
-		fmt.Println(array[i].componentName)
-	}
-}*/
-
-type compNames struct {
-	componentName string
 }
 
 //https://mholt.github.io/json-to-go/
@@ -138,19 +134,41 @@ type scanOutput struct {
 	} `json:"artifacts"`
 }
 
-func scanPackageList(compNames []string) error {
+func scanPackageList(c *components.Context) error {
 
+	if len(c.Arguments) == 0 {
+		return errors.New("Wrong number of arguments. Expected: String array, " + "Received: " + strconv.Itoa(len(c.Arguments)))
+	}
+
+	compNames := c.Arguments
+
+	return scanPackages(compNames, c)
+}
+
+func scanPackages(compNames []string, c *components.Context) error {
 	var sb strings.Builder
 	var payload strings.Builder
-	for i := range compNames {
-		sb.WriteString("{\"component_id\":\"" + compNames[i] + "\"},")
+	for _, element := range compNames {
+		sb.WriteString("{\"component_id\":\"" + element + "\"},")
 	}
+
+	var conf = new(scanConfiguration)
+	conf.componentId = c.Arguments[0]
+	conf.vulnFlag = c.GetStringFlagValue("v")
+	conf.licenseFlag = c.GetStringFlagValue("l")
+
+	fmt.Println("LicenseFlag " + conf.licenseFlag)
+	fmt.Println("VulnFlag " + conf.vulnFlag)
+
 	var payloadComp = strings.TrimSuffix(sb.String(), ",")
 	payload.WriteString("{\"component_details\":[" + payloadComp + "]}")
 
-	fmt.Println("Payload:::: %+v", payload.String())
+	fmt.Println("Payload::::", payload.String())
 
-	artAuth, url, client, err := artConf()
+	rtDetails, err := GetRtDetails(c)
+	url := getXrayRestAPIUrl(err, rtDetails)
+	artAuth, err := rtDetails.CreateArtAuthConfig()
+	client, err := httpclient.ClientBuilder().Build()
 	if err != nil {
 		return err
 	}
@@ -172,21 +190,69 @@ func scanPackageList(compNames []string) error {
 	if err != nil {
 		return err
 	}
-	printGeneral(scanData)
-	printIssues(scanData)
-	printLicenses(scanData)
+	if conf.licenseFlag == "" && conf.vulnFlag == "" {
+		for i := range scanData.Artifacts {
+			err := printGeneral(scanData, i)
+			err = printIssues(scanData, i)
+			err = printLicenses(scanData, i)
+			if err != nil {
+				return err
+			}
+		}
+	}
+
+	if conf.vulnFlag == "all" {
+		for i := range scanData.Artifacts {
+			err = printIssues(scanData, i)
+			if err != nil {
+				return err
+			}
+		}
+	}
+
+	if conf.vulnFlag == "high" {
+		for i := range scanData.Artifacts {
+			iss := scanData.Artifacts[i].Issues
+			for j := range iss {
+				if iss[j].Severity == "High" {
+					issue, err := json.MarshalIndent(iss[j], "", " ")
+					fmt.Println("Issue:::: " + string(issue))
+					if err != nil {
+						return err
+					}
+				}
+			}
+
+		}
+	}
+
+	if conf.licenseFlag == "all" {
+		for i := range scanData.Artifacts {
+			err = printLicenses(scanData, i)
+			if err != nil {
+				return err
+			}
+		}
+	}
 
 	return nil
 }
 
 func scanCmd(c *components.Context) error {
+
 	if len(c.Arguments) != 1 {
 		return errors.New("Wrong number of arguments. Expected: 1, " + "Received: " + strconv.Itoa(len(c.Arguments)))
 	}
+
 	var conf = new(scanConfiguration)
 	conf.componentId = c.Arguments[0]
+	conf.vulnFlag = c.GetStringFlagValue("v")
+	conf.licenseFlag = c.GetStringFlagValue("l")
 
-	artAuth, url, client, err := artConf()
+	rtDetails, err := GetRtDetails(c)
+	url := getXrayRestAPIUrl(err, rtDetails)
+	artAuth, err := rtDetails.CreateArtAuthConfig()
+	client, err := httpclient.ClientBuilder().Build()
 	if err != nil {
 		return err
 	}
@@ -194,8 +260,9 @@ func scanCmd(c *components.Context) error {
 	httpClientDetails.Headers = map[string]string{
 		"Content-Type": "application/json",
 	}
+	var payload = "{\"component_details\":[{\"component_id\":\"" + conf.componentId + "\"}]}"
 
-	_, body, err := client.SendPost(url, []byte("{\"component_details\":[{\"component_id\":\""+conf.componentId+"\"}]}"), httpClientDetails)
+	_, body, err := client.SendPost(url, []byte(payload), httpClientDetails)
 
 	var scanData scanOutput
 	err = json.Unmarshal(body, &scanData)
@@ -203,10 +270,86 @@ func scanCmd(c *components.Context) error {
 	if err != nil {
 		return err
 	}
-	printGeneral(scanData)
-	printIssues(scanData)
-	printLicenses(scanData)
+
+	if conf.vulnFlag == "all" {
+		for i := range scanData.Artifacts {
+			err = printIssues(scanData, i)
+			if err != nil {
+				return err
+			}
+		}
+	}
+
+	if conf.vulnFlag == "high" {
+		for i := range scanData.Artifacts {
+			iss := scanData.Artifacts[i].Issues
+			for j := range iss {
+				if iss[j].Severity == "High" {
+					issue, err := json.MarshalIndent(iss[j], "", " ")
+					fmt.Println("Issue:::: " + string(issue))
+					if err != nil {
+						return err
+					}
+				}
+			}
+
+		}
+	}
+
+	if conf.licenseFlag == "all" {
+		for i := range scanData.Artifacts {
+			err = printLicenses(scanData, i)
+			if err != nil {
+				return err
+			}
+		}
+	}
+
+	if conf.licenseFlag == "" && conf.vulnFlag == "" {
+		for i := range scanData.Artifacts {
+			err := printGeneral(scanData, i)
+			err = printIssues(scanData, i)
+			err = printLicenses(scanData, i)
+			if err != nil {
+				return err
+			}
+		}
+	}
 	return nil
+
+}
+
+func printGeneral(scanData scanOutput, i int) error {
+	general, err := json.MarshalIndent(scanData.Artifacts[i].General, "", " ")
+	fmt.Println("General:::: " + string(general))
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+func printIssues(scanData scanOutput, i int) error {
+	issues, err := json.MarshalIndent(scanData.Artifacts[i].Issues, "", " ")
+	fmt.Println("Issues:::: " + string(issues))
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+func printLicenses(scanData scanOutput, i int) error {
+	licenses, err := json.MarshalIndent(scanData.Artifacts[i].Licenses, "", " ")
+	fmt.Println("Licenses:::: " + string(licenses))
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+func getXrayRestAPIUrl(err error, rtDetails *config.ArtifactoryDetails) string {
+	url, err := utils.BuildArtifactoryUrl(strings.ReplaceAll(rtDetails.GetUrl(), "/artifactory/", "/xray/"),
+		"api/v1/summary/component", nil)
+	return url
 }
 
 func scanGit(c *components.Context) error {
@@ -226,179 +369,24 @@ func scanGit(c *components.Context) error {
 	grepCmd.Wait()
 	//After the list of Strings are received, please pass it to scanPackages(compNames []string)
 	result := string(grepBytes)
-	scanPackageList(strings.Split(strings.TrimSuffix(result, "\n"),"\n"))
-	return nil
+	return scanPackages(strings.Split(strings.TrimSuffix(result, "\n"), "\n"), c)
 }
 
-func artConf() (auth.ServiceDetails, string, *httpclient.HttpClient, error) {
-	artDetails, err := config.GetArtifactorySpecificConfig("", true, true)
+func GetRtDetails(c *components.Context) (*config.ArtifactoryDetails, error) {
+	serverId := c.GetStringFlagValue(ServerIdFlag)
+	details, err := commands.GetConfig(serverId, false)
 	if err != nil {
-		return nil, "", nil, err
+		return nil, err
 	}
-	artAuth, err := artDetails.CreateArtAuthConfig()
-
-	url, err := utils.BuildArtifactoryUrl(strings.ReplaceAll(artAuth.GetUrl(), "/artifactory/", "/xray/"),
-		"api/v1/summary/component", nil)
+	if details.Url == "" {
+		return nil, errors.New("no server-id was found, or the server-id has no url")
+	}
+	details.Url = clientutils.AddTrailingSlashIfNeeded(details.Url)
+	err = config.CreateInitialRefreshableTokensIfNeeded(details)
 	if err != nil {
-		return nil, "", nil, err
+		return nil, err
 	}
-	client, err := httpclient.ClientBuilder().Build()
-	if err != nil {
-		return nil, "", nil, err
-	}
-	return artAuth, url, client, nil
+	return details, nil
 }
 
-func printIssues(scanData scanOutput) error {
-	for i := range scanData.Artifacts {
-		issues, error := json.MarshalIndent(scanData.Artifacts[i].Issues, "", " ")
-		fmt.Println("Issues:::: " + string(issues))
-		if error != nil {
-			return error
-		}
-	}
-	return nil
-}
-
-func printGeneral(scanData scanOutput) error {
-	for i := range scanData.Artifacts {
-		general, error := json.MarshalIndent(scanData.Artifacts[i].General, "", " ")
-		fmt.Println("Component Data:::: " + string(general))
-		if error != nil {
-			return error
-		}
-	}
-	return nil
-}
-
-func printLicenses(scanData scanOutput) error {
-	for i := range scanData.Artifacts {
-		licenses, error := json.MarshalIndent(scanData.Artifacts[i].Licenses, "", " ")
-		fmt.Println("Licenses:::: " + string(licenses))
-		if error != nil {
-			return error
-		}
-	}
-	return nil
-}
-
-/*func scanPackageList(c *components.Context) error {
-
-	//bytes, err := json.Marshal(c.Arguments)
-	var b = []byte(`{"Components":[{"ComponentId":"deb://debian:buster:curl:7.64.0-4"},{"ComponentId":"npm://debug:2.2.0"}]}`)
-	var inputCompJson inputscanJson
-
-	err := json.Unmarshal(b, &inputCompJson)
-
-	var sb strings.Builder
-	var payload strings.Builder
-	for i := range inputCompJson.Components {
-		sb.WriteString("{\"component_id\":\"" + inputCompJson.Components[i].ComponentID + "\"},")
-	}
-	var payloadComp = strings.TrimSuffix(sb.String(), ",")
-	payload.WriteString("{\"component_details\":[" + payloadComp + "]}")
-
-	fmt.Printf("Payload:::: %+v", payload.String())
-
-	artDetails, err := config.GetArtifactorySpecificConfig("", true, true)
-	if err != nil {
-		return err
-	}
-
-	artAuth, err := artDetails.CreateArtAuthConfig()
-
-	url, err := utils.BuildArtifactoryUrl(strings.ReplaceAll(artAuth.GetUrl(), "/artifactory/", "/xray/"),
-		"api/v1/summary/component", nil)
-	if err != nil {
-		return err
-	}
-	httpClientDetails := artAuth.CreateHttpClientDetails()
-
-	client, err := httpclient.ClientBuilder().Build()
-	if err != nil {
-		return err
-	}
-	httpClientDetails.Headers = map[string]string{
-		"Content-Type": "application/json",
-	}
-
-	_, body, err := client.SendPost(url, []byte(payload.String()), httpClientDetails)
-
-	var scanData scanOutput
-	err = json.Unmarshal(body, &scanData)
-
-	data := clientutils.IndentJson(body)
-	scanOutputJSON := make(map[string][]scanOutput)
-	err = json.Unmarshal([]byte(data), &scanOutputJSON)
-
-	log.Output(clientutils.IndentJson(body))
-	if err != nil {
-		return err
-	}
-	//fmt.Printf("\n\n Scan Result:::: %+v", scanOutputJSON)
-	for i := range scanData.Artifacts {
-		fmt.Printf("\n\nScan Result::::%# v", pretty.Formatter(scanData.Artifacts[i].Issues))
-		//fmt.Printf("\n\n Scan Result-Vulnerability:::: %+v", scanData.Artifacts[i].Issues)
-		//fmt.Printf("\n\n Scan Result-Licensing:::: %+v", scanData.Artifacts[i].Licenses)
-		fmt.Printf("\n\nScan Result::::%# v", pretty.Formatter(scanData.Artifacts[i].Licenses))
-	}
-
-	return nil
-}*/
-
-/*
-func scanCmd(c *components.Context) error {
-	if len(c.Arguments) != 1 {
-		return errors.New("Wrong number of arguments. Expected: 1, " + "Received: " + strconv.Itoa(len(c.Arguments)))
-	}
-	var conf = new(scanConfiguration)
-	conf.componentId = c.Arguments[0]
-
-	artDetails, err := config.GetArtifactorySpecificConfig("", true, true)
-	if err != nil {
-		return err
-	}
-
-	artAuth, err := artDetails.CreateArtAuthConfig()
-
-	url, err := utils.BuildArtifactoryUrl(strings.ReplaceAll(artAuth.GetUrl(), "/artifactory/", "/xray/"),
-		"api/v1/summary/component", nil)
-	if err != nil {
-		return err
-	}
-	httpClientDetails := artAuth.CreateHttpClientDetails()
-
-	client, err := httpclient.ClientBuilder().Build()
-	if err != nil {
-		return err
-	}
-	httpClientDetails.Headers = map[string]string{
-		"Content-Type": "application/json",
-	}
-
-	_, body, err := client.SendPost(url, []byte("{\"component_details\":[{\"component_id\":\""+conf.componentId+"\"}]}"), httpClientDetails)
-
-	//log.Output(clientutils.IndentJson(body))
-
-	var scanData scanOutput
-	err = json.Unmarshal(body, &scanData)
-
-	//data := clientutils.IndentJson(body)
-	//scanOutputJSON := make(map[string][]scanOutput)
-	//err = json.Unmarshal([]byte(data), &scanOutputJSON)
-
-
-	if err != nil {
-		return err
-	}
-	for i := range scanData.Artifacts {
-		issues, error := json.MarshalIndent(scanData.Artifacts[i].Issues,"", " ")
-		fmt.Println("Issues:::: "+ string(issues))
-		licenses, error := json.MarshalIndent(scanData.Artifacts[i].Licenses,"", " ")
-		fmt.Println("Licenses:::: "+ string(licenses))
-		if error != nil {
-			return error
-		}
-	}
-	return nil
-}*/
+//scanGitRepo http://github.com/cockroachdb/cockroach “/Users/shimi/go-cache”
