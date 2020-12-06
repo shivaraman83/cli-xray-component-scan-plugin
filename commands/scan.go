@@ -61,7 +61,7 @@ func ScanGitRepo() components.Command {
 		Description: "Scans components using Xray",
 		//Aliases:     []string{"hi"},
 		Arguments: getScanArguments(),
-		Flags:     getScanFlags(),
+		Flags:     getScanFlagsForGit(),
 		//EnvVars:     getHelloEnvVar(),
 		Action: func(c *components.Context) error {
 			return scanGit(c)
@@ -69,7 +69,7 @@ func ScanGitRepo() components.Command {
 	}
 }
 
-func getScanFlags() []components.Flag {
+func getScanFlagsForGit() []components.Flag {
 	return []components.Flag{
 		components.StringFlag{
 			Name: "v",
@@ -92,8 +92,23 @@ func getScanFlags() []components.Flag {
 		},
 		components.BoolFlag{
 			Name:         "downloadCache",
-			Description: "Whether to download the go.mod cache from Artifactory",
+			Description:  "Whether to download the go.mod cache from Artifactory",
 			DefaultValue: false,
+		},
+	}
+
+}
+
+func getScanFlags() []components.Flag {
+	return []components.Flag{
+		components.StringFlag{
+			Name: "v",
+			Description: "\"high\" If you need only high vulnernability information " +
+				"\"all\" for all the vulnerability information",
+		},
+		components.StringFlag{
+			Name:        "l",
+			Description: "To fetch all the license information ",
 		},
 	}
 
@@ -384,8 +399,7 @@ func scanGit(c *components.Context) error {
 	//Invoke the process to get the list of gomodules
 	cacheFolder := c.Arguments[1]
 
-
-	if c.GetBoolFlagValue("downloadCache"){
+	if c.GetBoolFlagValue("downloadCache") {
 		err2 := downloadCache(c, cacheFolder)
 		if err2 != nil {
 			return err2
@@ -463,7 +477,7 @@ func uploadCache(c *components.Context, cacheFolder string) error {
 	}
 	var filesToTar []string
 	for _, file := range files {
-		filesToTar = append(filesToTar, cacheFolder + "/" + file.Name())
+		filesToTar = append(filesToTar, cacheFolder+"/"+file.Name())
 	}
 
 	err = z.Make("goModCache.tgz", filesToTar)
