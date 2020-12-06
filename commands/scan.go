@@ -13,6 +13,7 @@ import (
 	clientutils "github.com/jfrog/jfrog-client-go/utils"
 	"github.com/mholt/archiver"
 	"io/ioutil"
+	"log"
 	"os"
 	"os/exec"
 	//"github.com/kr/pretty"
@@ -87,6 +88,11 @@ func getScanFlags() []components.Flag {
 		components.BoolFlag{
 			Name:         "updateCache",
 			Description:  "Whether to update/upload the local go.mod cache back to Artifactory",
+			DefaultValue: false,
+		},
+		components.BoolFlag{
+			Name:         "downloadCache",
+			Description: "Whether to download the go.mod cache from Artifactory",
 			DefaultValue: false,
 		},
 	}
@@ -378,58 +384,125 @@ func scanGit(c *components.Context) error {
 	//Invoke the process to get the list of gomodules
 	cacheFolder := c.Arguments[1]
 
+
+	if c.GetBoolFlagValue("downloadCache"){
+		err2 := downloadCache(c, cacheFolder)
+		if err2 != nil {
+			return err2
+		}
+	}
+
 	magicCmd := exec.Command("./magic", cacheFolder)
 	magicIn, _ := magicCmd.StdinPipe()
 	magicOut, _ := magicCmd.StdoutPipe()
-	magicCmd.Start()
-	magicIn.Write([]byte(c.Arguments[0]))
-	magicIn.Close()
+	_ = magicCmd.Start()
+	_, _ = magicIn.Write([]byte(c.Arguments[0]))
+	_ = magicIn.Close()
 	magicBytes, _ := ioutil.ReadAll(magicOut)
-	magicCmd.Wait()
+	_ = magicCmd.Wait()
 	//After the list of Strings are received, please pass it to scanPackages(compNames []string)
 	result := string(magicBytes)
-	
+
 	if c.GetBoolFlagValue("updateCache") {
-
-		z := archiver.TarGz
-		err := z.Make("goModCache.tgz", []string{cacheFolder})
-		if err != nil {
-			return err
-		}
-		rtDetails, err := GetRtDetails(c)
-		authDetails, err := rtDetails.CreateArtAuthConfig()
-		if err != nil {
-			return err
-		}
-		rtConf, err := rtConfig.NewConfigBuilder().Build()
-		if err != nil {
-			return err
-		}
-
-		if err != nil {
-			return err
-		}
-		x, err := artifactory.New(&authDetails, rtConf)
-		if err != nil {
-			return err
-		}
-		params := services.NewUploadParams()
-		params.SetPattern("goModCache.tgz")
-		params.SetTarget("GoScanCache/")
-		upService := services.NewUploadService(x.Client())
-		upService.SetThreads(1)
-		upService.SetServiceDetails(authDetails)
-		_, _, err = upService.UploadFiles(params)
-		if err != nil {
-			return err
-		}
-		// remove the compressed cache after upload
-		e := os.Remove("goModCache.tgz")
-		if e != nil {
-			return e
+		err2 := uploadCache(c, cacheFolder)
+		if err2 != nil {
+			return err2
 		}
 	}
 	return scanPackages(strings.Split(strings.TrimSuffix(result, "\n"), "\n"), c)
+}
+
+func downloadCache(c *components.Context, cacheFolder string) error {
+	rtDetails, err := GetRtDetails(c)
+	if err != nil {
+		return err
+	}
+	authDetails, err := rtDetails.CreateArtAuthConfig()
+	if err != nil {
+		return err
+	}
+	rtConf, err := rtConfig.NewConfigBuilder().Build()
+	if err != nil {
+		return err
+	}
+
+	x, err := artifactory.New(&authDetails, rtConf)
+	if err != nil {
+		return err
+	}
+
+	downloadService := services.NewDownloadService(x.Client())
+	downloadService.SetThreads(1)
+	downloadService.SetServiceDetails(authDetails)
+	params := services.NewDownloadParams()
+	params.SetPattern("GoScanCache/goModCache.tgz")
+	params.SetTarget(cacheFolder + "/goModCache.tgz")
+	_, _, err = downloadService.DownloadFiles(params)
+	if err != nil {
+		return err
+	}
+
+	z := archiver.TarGz
+	err = z.Open(cacheFolder+"/goModCache.tgz", cacheFolder)
+	if err != nil {
+		return err
+	}
+	e := os.Remove(cacheFolder + "/goModCache.tgz")
+	if e != nil {
+		return e
+	}
+	return nil
+}
+
+func uploadCache(c *components.Context, cacheFolder string) error {
+	z := archiver.TarGz
+
+	files, err := ioutil.ReadDir(cacheFolder)
+	if err != nil {
+		log.Fatal(err)
+	}
+	var filesToTar []string
+	for _, file := range files {
+		filesToTar = append(filesToTar, cacheFolder + "/" + file.Name())
+	}
+
+	err = z.Make("goModCache.tgz", filesToTar)
+	if err != nil {
+		return err
+	}
+	rtDetails, err := GetRtDetails(c)
+	if err != nil {
+		return err
+	}
+	authDetails, err := rtDetails.CreateArtAuthConfig()
+	if err != nil {
+		return err
+	}
+	rtConf, err := rtConfig.NewConfigBuilder().Build()
+	if err != nil {
+		return err
+	}
+
+	x, err := artifactory.New(&authDetails, rtConf)
+	if err != nil {
+		return err
+	}
+	params := services.NewUploadParams()
+	params.SetPattern("goModCache.tgz")
+	params.SetTarget("GoScanCache/")
+	upService := services.NewUploadService(x.Client())
+	upService.SetThreads(1)
+	upService.SetServiceDetails(authDetails)
+	_, _, err = upService.UploadFiles(params)
+	if err != nil {
+		return err
+	}
+	// remove the compressed cache after upload
+	e := os.Remove("goModCache.tgz")
+	if e != nil {
+		return e
+	}
+	return nil
 }
 
 func GetRtDetails(c *components.Context) (*config.ArtifactoryDetails, error) {
