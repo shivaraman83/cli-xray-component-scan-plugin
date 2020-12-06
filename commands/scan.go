@@ -7,13 +7,17 @@ import (
 	"github.com/jfrog/jfrog-cli-core/artifactory/commands"
 	"github.com/jfrog/jfrog-cli-core/plugins/components"
 	"github.com/jfrog/jfrog-cli-core/utils/config"
+	"github.com/jfrog/jfrog-client-go/artifactory/services"
 	"github.com/jfrog/jfrog-client-go/artifactory/services/utils"
 	"github.com/jfrog/jfrog-client-go/httpclient"
 	clientutils "github.com/jfrog/jfrog-client-go/utils"
+	"github.com/mholt/archiver"
 	"io/ioutil"
+	"os"
 	"os/exec"
 	//"github.com/kr/pretty"
-	//"github.com/jfrog/jfrog-client-go/utils/log"
+	"github.com/jfrog/jfrog-client-go/artifactory"
+	rtConfig "github.com/jfrog/jfrog-client-go/config"
 	"strconv"
 	"strings"
 	//"time"
@@ -75,6 +79,16 @@ func getScanFlags() []components.Flag {
 			Name:        "l",
 			Description: "To fetch all the license information ",
 		},
+		components.StringFlag{
+			Name:         "cacheRepo",
+			Description:  "The cache repository in Artifactory to use for GitHub scanning.",
+			DefaultValue: "GoScanCache",
+		},
+		components.BoolFlag{
+			Name:         "updateCache",
+			Description:  "Whether to update/upload the local go.mod cache back to Artifactory",
+			DefaultValue: false,
+		},
 	}
 
 }
@@ -83,6 +97,7 @@ type scanConfiguration struct {
 	componentId string
 	vulnFlag    string
 	licenseFlag string
+	cacheRepo   string
 }
 
 func getScanArguments() []components.Argument {
@@ -358,17 +373,62 @@ func scanGit(c *components.Context) error {
 	}
 	var conf = new(scanConfiguration)
 	conf.componentId = c.Arguments[0]
+	conf.cacheRepo = c.GetStringFlagValue("cacheRepo")
+
 	//Invoke the process to get the list of gomodules
-	grepCmd := exec.Command("./magic", c.Arguments[1])
-	grepIn, _ := grepCmd.StdinPipe()
-	grepOut, _ := grepCmd.StdoutPipe()
-	grepCmd.Start()
-	grepIn.Write([]byte(c.Arguments[0]))
-	grepIn.Close()
-	grepBytes, _ := ioutil.ReadAll(grepOut)
-	grepCmd.Wait()
+	cacheFolder := c.Arguments[1]
+
+	magicCmd := exec.Command("./magic", cacheFolder)
+	magicIn, _ := magicCmd.StdinPipe()
+	magicOut, _ := magicCmd.StdoutPipe()
+	magicCmd.Start()
+	magicIn.Write([]byte(c.Arguments[0]))
+	magicIn.Close()
+	magicBytes, _ := ioutil.ReadAll(magicOut)
+	magicCmd.Wait()
 	//After the list of Strings are received, please pass it to scanPackages(compNames []string)
-	result := string(grepBytes)
+	result := string(magicBytes)
+	
+	if c.GetBoolFlagValue("updateCache") {
+
+		z := archiver.TarGz
+		err := z.Make("goModCache.tgz", []string{cacheFolder})
+		if err != nil {
+			return err
+		}
+		rtDetails, err := GetRtDetails(c)
+		authDetails, err := rtDetails.CreateArtAuthConfig()
+		if err != nil {
+			return err
+		}
+		rtConf, err := rtConfig.NewConfigBuilder().Build()
+		if err != nil {
+			return err
+		}
+
+		if err != nil {
+			return err
+		}
+		x, err := artifactory.New(&authDetails, rtConf)
+		if err != nil {
+			return err
+		}
+		params := services.NewUploadParams()
+		params.SetPattern("goModCache.tgz")
+		params.SetTarget("GoScanCache/")
+		upService := services.NewUploadService(x.Client())
+		upService.SetThreads(1)
+		upService.SetServiceDetails(authDetails)
+		_, _, err = upService.UploadFiles(params)
+		if err != nil {
+			return err
+		}
+		// remove the compressed cache after upload
+		e := os.Remove("goModCache.tgz")
+		if e != nil {
+			return e
+		}
+	}
 	return scanPackages(strings.Split(strings.TrimSuffix(result, "\n"), "\n"), c)
 }
 
