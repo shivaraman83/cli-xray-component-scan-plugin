@@ -166,6 +166,15 @@ func ScanPackages(compNames []string, c *components.Context) error {
 	if err != nil {
 		return err
 	}
+	err = PrintOutput(conf, scanData, err)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func PrintOutput(conf *ScanConfiguration, scanData ScanOutput, err error) error {
 	if conf.LicenseFlag == "" && conf.VulnFlag == "" {
 		for i := range scanData.Artifacts {
 			err := PrintGeneral(scanData, i)
@@ -201,6 +210,5 @@ func ScanPackages(compNames []string, c *components.Context) error {
 			}
 		}
 	}
-
 	return nil
 }

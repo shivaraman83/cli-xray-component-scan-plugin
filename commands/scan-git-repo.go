@@ -20,7 +20,7 @@ import (
 
 func ScanGitRepo() components.Command {
 	return components.Command{
-		Name:        "scanGitRepo",
+		Name:        "scan-git-repo",
 		Description: "Scans components using Xray",
 		//Aliases:     []string{"hi"},
 		Arguments: getScanArguments(),

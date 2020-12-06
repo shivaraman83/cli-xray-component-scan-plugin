@@ -97,40 +97,9 @@ func scanCmd(c *components.Context) error {
 		return err
 	}
 
-	if conf.VulnFlag == "all" {
-		for i := range scanData.Artifacts {
-			err = scanUtils.PrintIssues(scanData, i)
-			if err != nil {
-				return err
-			}
-		}
-	}
-
-	if conf.VulnFlag == "high" {
-		err2 := scanUtils.PrintOnlyHighVulnerabilities(scanData)
-		if err2 != nil {
-			return err2
-		}
-	}
-
-	if conf.LicenseFlag == "all" {
-		for i := range scanData.Artifacts {
-			err = scanUtils.PrintLicenses(scanData, i)
-			if err != nil {
-				return err
-			}
-		}
-	}
-
-	if conf.LicenseFlag == "" && conf.VulnFlag == "" {
-		for i := range scanData.Artifacts {
-			err := scanUtils.PrintGeneral(scanData, i)
-			err = scanUtils.PrintIssues(scanData, i)
-			err = scanUtils.PrintLicenses(scanData, i)
-			if err != nil {
-				return err
-			}
-		}
+	err = scanUtils.PrintOutput(conf, scanData, err)
+	if err != nil {
+		return err
 	}
 	return nil
 
