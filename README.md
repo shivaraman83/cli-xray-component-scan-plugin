@@ -33,9 +33,9 @@ The plugin requires the component id's to be passed as per the format displayed 
     - Example:
     ```
   $ jfrog xray-scan scan-component "deb://debian:buster:curl:7.64.0-4"
-  $ jfrog xray-scan scan-component -v all "deb://debian:buster:curl:7.64.0-4"
-  $ jfrog xray-scan scan-component -v high "deb://debian:buster:curl:7.64.0-4"
-  $ jfrog xray-scan scan-component -l all "deb://debian:buster:curl:7.64.0-4"
+  $ jfrog xray-scan scan-component --v all "deb://debian:buster:curl:7.64.0-4"
+  $ jfrog xray-scan scan-component --v high "deb://debian:buster:curl:7.64.0-4"
+  $ jfrog xray-scan scan-component --l all "deb://debian:buster:curl:7.64.0-4"
   ```
   
 * scan-components
