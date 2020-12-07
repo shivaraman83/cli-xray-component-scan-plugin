@@ -13,9 +13,9 @@ func ScanPackages() components.Command {
 	return components.Command{
 		Name:        "scan-components",
 		Description: "Scans a list of Packages/Components using Xray",
-		//Aliases:     []string{"hi"},
-		Arguments: getScanPackagesArguments(),
-		Flags:     getScanPackagesFlags(),
+		Aliases:     []string{"sc"},
+		Arguments:   getScanPackagesArguments(),
+		Flags:       getScanPackagesFlags(),
 		//EnvVars:     getHelloEnvVar(),
 		Action: func(c *components.Context) error {
 			return scanPackageList(c)

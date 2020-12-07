@@ -22,9 +22,9 @@ func ScanGitRepo() components.Command {
 	return components.Command{
 		Name:        "scan-git-repo",
 		Description: "Scans components using Xray",
-		//Aliases:     []string{"hi"},
-		Arguments: getScanArguments(),
-		Flags:     getScanFlagsForGit(),
+		Aliases:     []string{"sgr"},
+		Arguments:   getScanArguments(),
+		Flags:       getScanFlagsForGit(),
 		//EnvVars:     getHelloEnvVar(),
 		Action: func(c *components.Context) error {
 			return scanGit(c)
