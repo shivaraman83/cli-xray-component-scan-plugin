@@ -62,14 +62,6 @@ func getScanFlagsForGit() []components.Flag {
 
 }
 
-//https://mholt.github.io/json-to-go/
-//https://play.golang.org/p/Z3yszFl01L
-//https://www.jfrog.com/confluence/display/JFROG/Xray+REST+API
-//https://tutorialedge.net/golang/parsing-json-with-golang/
-
-//./cli-xray-component-scan-plugin scan "deb://debian:buster:curl:7.64.0-4"
-//./cli-xray-component-scan-plugin scan "npm://debug:2.2.0"
-
 func scanGit(c *components.Context) error {
 	if len(c.Arguments) != 2 {
 		return errors.New("Wrong number of arguments. Expected: 2, " + "Received: " + strconv.Itoa(len(c.Arguments)))
@@ -200,5 +192,3 @@ func uploadCache(c *components.Context, cacheFolder string) error {
 	}
 	return nil
 }
-
-//scanGitRepo http://github.com/cockroachdb/cockroach “/Users/shimi/go-cache”

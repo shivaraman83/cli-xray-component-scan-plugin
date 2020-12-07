@@ -18,7 +18,7 @@ Uninstalling a plugin
 
 
 ## Component Identifiers
-The plugin requires the component id's to be passed as per the format displayed here -https://www.jfrog.com/confluence/display/JFROG/Xray+REST+API#XrayRESTAPI-ComponentIdentifiers
+The plugin requires the component id's to be passed as per the format displayed  [here]https://www.jfrog.com/confluence/display/JFROG/Xray+REST+API#XrayRESTAPI-ComponentIdentifiers
 
 
 
@@ -81,10 +81,4 @@ None.
 The release notes are available [here](RELEASE.md).
 
 
-CD into the new repository created.
-Build and test your plugin by running the following commands.
-
-$ cd cli-xray-component-scan-plugin
-$ go build -o xray-scan
-$ ./xray-scan --help
 

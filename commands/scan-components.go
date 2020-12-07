@@ -46,14 +46,6 @@ func getScanPackagesArguments() []components.Argument {
 	}
 }
 
-//https://mholt.github.io/json-to-go/
-//https://play.golang.org/p/Z3yszFl01L
-//https://www.jfrog.com/confluence/display/JFROG/Xray+REST+API
-//https://tutorialedge.net/golang/parsing-json-with-golang/
-
-//./cli-xray-component-scan-plugin scan "deb://debian:buster:curl:7.64.0-4"
-//./cli-xray-component-scan-plugin scan "npm://debug:2.2.0"
-
 func scanPackageList(c *components.Context) error {
 	if len(c.Arguments) == 0 {
 		return errors.New("Wrong number of arguments. Expected: String array, " + "Received: " + strconv.Itoa(len(c.Arguments)))
@@ -61,5 +53,3 @@ func scanPackageList(c *components.Context) error {
 	compNames := c.Arguments
 	return scanUtils.ScanPackages(compNames, c)
 }
-
-//scanGitRepo http://github.com/cockroachdb/cockroach “/Users/shimi/go-cache”
