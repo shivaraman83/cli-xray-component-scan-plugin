@@ -70,6 +70,7 @@ The plugin requires the component id's to be passed as per the format displayed 
    $ jfrog xray-scan scan-git-repo --downloadCache=true --v all http://github.com/cockroachdb/cockroach "/Users/sivas/Workspace/plugin-cache"
    $ jfrog xray-scan scan-git-repo --downloadCache=true --l all http://github.com/cockroachdb/cockroach "/Users/sivas/Workspace/plugin-cache"
    ```
+   https://git.jfrog.info/projects/DEVOA/repos/magic/browse - Contains the code which scans a Github URL containing a Go Lang project and returns the dependency tree
 
 ### Environment variables
 None.
