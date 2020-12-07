@@ -10,6 +10,7 @@ import (
 	"github.com/jfrog/jfrog-client-go/artifactory/services/utils"
 	"github.com/jfrog/jfrog-client-go/httpclient"
 	clientutils "github.com/jfrog/jfrog-client-go/utils"
+	"github.com/jfrog/jfrog-client-go/utils/log"
 	"strings"
 )
 
@@ -82,7 +83,21 @@ func PrintGeneral(scanData ScanOutput, i int) error {
 
 func PrintIssues(scanData ScanOutput, i int) error {
 	issues, err := json.MarshalIndent(scanData.Artifacts[i].Issues, "", " ")
-	fmt.Println("Issues:::: " + string(issues))
+	fmt.Println("Vulnerabilties:::: " + string(issues))
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+func PrintOnlyValidVulnerabilities(scanData ScanOutput, i int) error {
+	issues, err := json.MarshalIndent(scanData.Artifacts[i].Issues, "", " ")
+	iss := scanData.Artifacts[i].Issues
+	for j := range iss {
+		if iss[j].Severity != "" {
+			fmt.Println("Vulnerabilties:::: " + string(issues))
+		}
+	}
 	if err != nil {
 		return err
 	}
@@ -110,7 +125,7 @@ func PrintOnlyHighVulnerabilities(scanData ScanOutput) error {
 		for j := range iss {
 			if iss[j].Severity == "High" {
 				issue, err := json.MarshalIndent(iss[j], "", " ")
-				fmt.Println("Issue:::: " + string(issue))
+				fmt.Println("Vulnerability:::: " + string(issue))
 				if err != nil {
 					return err
 				}
@@ -133,13 +148,13 @@ func ScanPackages(compNames []string, c *components.Context) error {
 	conf.VulnFlag = c.GetStringFlagValue("v")
 	conf.LicenseFlag = c.GetStringFlagValue("l")
 
-	fmt.Println("LicenseFlag " + conf.LicenseFlag)
-	fmt.Println("VulnFlag " + conf.VulnFlag)
+	log.Debug("LicenseFlag " + conf.LicenseFlag)
+	log.Debug("VulnFlag" + conf.VulnFlag)
 
 	var payloadComp = strings.TrimSuffix(sb.String(), ",")
 	payload.WriteString("{\"component_details\":[" + payloadComp + "]}")
 
-	fmt.Println("Payload::::", payload.String())
+	log.Debug("Payload ::::" + payload.String())
 
 	rtDetails, err := GetRtDetails(c)
 	url := GetXrayRestAPIUrl(err, rtDetails)
@@ -196,9 +211,9 @@ func PrintOutput(conf *ScanConfiguration, scanData ScanOutput, err error) error 
 	}
 
 	if conf.VulnFlag == "high" {
-		err2 := PrintOnlyHighVulnerabilities(scanData)
-		if err2 != nil {
-			return err2
+		err := PrintOnlyHighVulnerabilities(scanData)
+		if err != nil {
+			return err
 		}
 	}
 
