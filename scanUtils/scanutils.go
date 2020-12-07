@@ -190,6 +190,10 @@ func ScanPackages(compNames []string, c *components.Context) error {
 }
 
 func PrintOutput(conf *ScanConfiguration, scanData ScanOutput, err error) error {
+
+	b, _ := json.MarshalIndent(scanData, "", " ")
+	fmt.Println(string(b))
+
 	if conf.LicenseFlag == "" && conf.VulnFlag == "" {
 		for i := range scanData.Artifacts {
 			err := PrintGeneral(scanData, i)
