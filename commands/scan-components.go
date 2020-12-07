@@ -11,7 +11,7 @@ import (
 func ScanPackages() components.Command {
 	//var compNames = []string{"deb://debian:buster:curl:7.64.0-4", "npm://debug:2.2.0", "go://github.com/ulikunitz/xz:0.5.6"}
 	return components.Command{
-		Name:        "scan-packages",
+		Name:        "scan-components",
 		Description: "Scans a list of Packages/Components using Xray",
 		//Aliases:     []string{"hi"},
 		Arguments: getScanPackagesArguments(),
