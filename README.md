@@ -1,8 +1,7 @@
 # hello-frog
 
 ## About this plugin
-This plugin is a template and a functioning example for a basic JFrog CLI plugin. 
-This README shows the expected structure of your plugin's README.
+This plugin can scan a component,a list of components(artifact/binaries) or a Golang gitrepo for vulnerabilities and complete licensing information using Jfrog Xray.
 
 ## Installation with JFrog CLI
 Installing the latest version:
@@ -19,9 +18,9 @@ Uninstalling a plugin
 
 ## Usage
 ### Commands
-* hello
+* scan
     - Arguments:
-        - addressee - The name of the person you would like to greet.
+        - componentId
     - Flags:
         - shout: Makes output uppercase **[Default: false]**
         - repeat: Greets multiple times **[Default: 1]**

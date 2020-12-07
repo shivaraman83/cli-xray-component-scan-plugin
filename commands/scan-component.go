@@ -33,8 +33,9 @@ func getScanFlags() []components.Flag {
 				"\"all\" for all the vulnerability information",
 		},
 		components.StringFlag{
-			Name:        "l",
-			Description: "To fetch all the license information ",
+			Name:         "l",
+			Description:  "To fetch all the license information ",
+			DefaultValue: "all",
 		},
 	}
 
