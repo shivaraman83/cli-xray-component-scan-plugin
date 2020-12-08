@@ -18,7 +18,7 @@ func ScanComponents() components.Command {
 		Flags:       getScanComponentsFlags(),
 		//EnvVars:     getHelloEnvVar(),
 		Action: func(c *components.Context) error {
-			return scanPackageList(c)
+			return scanComponents(c)
 		},
 	}
 }
@@ -62,7 +62,7 @@ func getScanComponentsArguments() []components.Argument {
 	}
 }
 
-func scanPackageList(c *components.Context) error {
+func scanComponents(c *components.Context) error {
 	if len(c.Arguments) == 0 {
 		return errors.New("Wrong number of arguments. Expected: String array, " + "Received: " + strconv.Itoa(len(c.Arguments)))
 	}
