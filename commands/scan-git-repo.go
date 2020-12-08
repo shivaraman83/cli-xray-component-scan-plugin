@@ -4,18 +4,16 @@ import (
 	"errors"
 	"github.com/jfrog/jfrog-cli-core/plugins/components"
 	"github.com/jfrog/jfrog-cli-plugin-template/scanUtils"
+	"github.com/jfrog/jfrog-client-go/artifactory"
 	"github.com/jfrog/jfrog-client-go/artifactory/services"
+	rtConfig "github.com/jfrog/jfrog-client-go/config"
 	"github.com/mholt/archiver"
 	"io/ioutil"
 	"log"
 	"os"
 	"os/exec"
-	//"github.com/kr/pretty"
-	"github.com/jfrog/jfrog-client-go/artifactory"
-	rtConfig "github.com/jfrog/jfrog-client-go/config"
 	"strconv"
 	"strings"
-	//"time"
 )
 
 func ScanGitRepo() components.Command {
@@ -88,7 +86,6 @@ func scanGit(c *components.Context) error {
 	_ = magicIn.Close()
 	magicBytes, _ := ioutil.ReadAll(magicOut)
 	_ = magicCmd.Wait()
-	//After the list of Strings are received, please pass it to scanPackages(compNames []string)
 	result := string(magicBytes)
 
 	if c.GetBoolFlagValue("updateCache") {
