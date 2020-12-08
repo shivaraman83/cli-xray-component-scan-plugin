@@ -173,11 +173,6 @@ func ScanPackages(compNames []string, c *components.Context) error {
 	var scanData ScanOutput
 	err = json.Unmarshal(body, &scanData)
 
-	//data := clientutils.IndentJson(body)
-	//scanOutputJSON := make(map[string][]scanOutput)
-	///err = json.Unmarshal([]byte(data), &scanOutputJSON)
-
-	//log.Output(clientutils.IndentJson(body))
 	if err != nil {
 		return err
 	}
@@ -191,14 +186,11 @@ func ScanPackages(compNames []string, c *components.Context) error {
 
 func PrintOutput(conf *ScanConfiguration, scanData ScanOutput, err error) error {
 
-	//_, _ = json.MarshalIndent(scanData, "", " ")
-	//fmt.Println(string(b))
-
 	first := true
 	if conf.LicenseFlag == "" && conf.VulnFlag == "" {
 		fmt.Println("[")
 		for i := range scanData.Artifacts {
-			if !first{
+			if !first {
 				fmt.Println(",")
 			} else {
 				first = false
