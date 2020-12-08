@@ -195,7 +195,7 @@ func PrintOutput(conf *ScanConfiguration, scanData ScanOutput, err error) error 
 
 	if conf.VulnFlag == "all" {
 		for i := range scanData.Artifacts {
-			err = PrintIssues(scanData, i)
+			err = PrintOnlyValidVulnerabilities(scanData, i)
 			if err != nil {
 				return err
 			}
