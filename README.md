@@ -24,20 +24,6 @@ The plugin requires the component id's to be passed as per the format displayed 
 
 ## Usage
 ### Commands
-* scan-component
-    - Arguments:
-        - componentId - Component Id of the artifact
-    - Flags:
-        - v: Displays only vulnerability information **[Default: false]** **[high: For high vulnerabilities only]** **[all: To view all the vulnerabilities]**
-        - l: Displays only licensing information **[Default: false]** **[all: To view license]**
-    - Example:
-    ```
-  $ jfrog xray-scan scan-component "deb://debian:buster:curl:7.64.0-4"
-  $ jfrog xray-scan scan-component --v all "deb://debian:buster:curl:7.64.0-4"
-  $ jfrog xray-scan scan-component --v high "deb://debian:buster:curl:7.64.0-4"
-  $ jfrog xray-scan scan-component --l all "deb://debian:buster:curl:7.64.0-4"
-  ```
-  
 * scan-components
     - Arguments:
         - String Array of componentId's - Component Id's of all the artifacts
@@ -46,6 +32,10 @@ The plugin requires the component id's to be passed as per the format displayed 
         - l: Displays only licensing information **[Default: false]** **[all: To view license]**
     - Example:
     ```
+  $ jfrog xray-scan sc "deb://debian:buster:curl:7.64.0-4"
+  $ jfrog xray-scan sc --v all "deb://debian:buster:curl:7.64.0-4"
+  $ jfrog xray-scan scan-components --v high "deb://debian:buster:curl:7.64.0-4"
+  $ jfrog xray-scan scan-components --l all "deb://debian:buster:curl:7.64.0-4"
   $ jfrog xray-scan scan-components "deb://debian:buster:curl:7.64.0-4" "npm://debug:2.2.0" "go://github.com/ethereum/go-ethereum:1.8.2"
   $ jfrog xray-scan scan-components --v all "deb://debian:buster:curl:7.64.0-4" "npm://debug:2.2.0" "go://github.com/ethereum/go-ethereum:1.8.2"
   $ jfrog xray-scan scan-components --v high "deb://debian:buster:curl:7.64.0-4" "npm://debug:2.2.0" "go://github.com/ethereum/go-ethereum:1.8.2"
