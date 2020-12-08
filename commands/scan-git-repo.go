@@ -63,16 +63,17 @@ func scanGit(c *components.Context) error {
 	if len(c.Arguments) != 2 {
 		return errors.New("Wrong number of arguments. Expected: 2, " + "Received: " + strconv.Itoa(len(c.Arguments)))
 	}
-	var conf = new(scanConfiguration)
-	conf.componentId = c.Arguments[0]
-	conf.cacheRepo = c.GetStringFlagValue("cacheRepo")
-
+	var conf = new(scanUtils.ScanConfiguration)
+	//conf.ComponentId = c.Arguments[0]
+	conf.CacheRepo = c.GetStringFlagValue("cacheRepo")
+	conf.VulnFlag = c.GetStringFlagValue("v")
+	conf.LicenseFlag = c.GetStringFlagValue("l")
 	cacheFolder := c.Arguments[1]
 
 	if c.GetBoolFlagValue("downloadCache") {
-		err2 := downloadCache(c, cacheFolder)
-		if err2 != nil {
-			return err2
+		err := downloadCache(c, cacheFolder)
+		if err != nil {
+			return err
 		}
 	}
 
@@ -87,12 +88,19 @@ func scanGit(c *components.Context) error {
 	result := string(magicBytes)
 
 	if c.GetBoolFlagValue("updateCache") {
-		err2 := uploadCache(c, cacheFolder)
-		if err2 != nil {
-			return err2
+		err := uploadCache(c, cacheFolder)
+		if err != nil {
+			return err
 		}
 	}
-	return scanUtils.ScanPackages(strings.Split(strings.TrimSuffix(result, "\n"), "\n"), c)
+
+	rtDetails, err := scanUtils.GetRtDetails(c)
+
+	if err != nil {
+		return err
+	}
+
+	return scanUtils.ScanPackages(strings.Split(strings.TrimSuffix(result, "\n"), "\n"), conf, rtDetails)
 }
 
 func downloadCache(c *components.Context, cacheFolder string) error {

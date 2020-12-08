@@ -17,10 +17,9 @@ import (
 const ServerIdFlag = "server-id"
 
 type ScanConfiguration struct {
-	ComponentId string
 	VulnFlag    string
 	LicenseFlag string
-	cacheRepo   string
+	CacheRepo   string
 }
 
 type ScanOutput struct {
@@ -113,12 +112,6 @@ func PrintLicenses(scanData ScanOutput, i int) error {
 	return nil
 }
 
-func GetXrayRestAPIUrl(err error, rtDetails *config.ArtifactoryDetails) string {
-	url, err := utils.BuildArtifactoryUrl(strings.ReplaceAll(rtDetails.GetUrl(), "/artifactory/", "/xray/"),
-		"api/v1/summary/component", nil)
-	return url
-}
-
 func PrintOnlyHighVulnerabilities(scanData ScanOutput) error {
 	for i := range scanData.Artifacts {
 		iss := scanData.Artifacts[i].Issues
@@ -136,28 +129,19 @@ func PrintOnlyHighVulnerabilities(scanData ScanOutput) error {
 	return nil
 }
 
-func ScanPackages(compNames []string, c *components.Context) error {
+func ScanPackages(compNames []string, conf *ScanConfiguration, rtDetails *config.ArtifactoryDetails) error {
 	var sb strings.Builder
 	var payload strings.Builder
 	for _, element := range compNames {
 		sb.WriteString("{\"component_id\":\"" + element + "\"},")
 	}
-
-	var conf = new(ScanConfiguration)
-	conf.ComponentId = c.Arguments[0]
-	conf.VulnFlag = c.GetStringFlagValue("v")
-	conf.LicenseFlag = c.GetStringFlagValue("l")
-
-	log.Debug("LicenseFlag " + conf.LicenseFlag)
-	log.Debug("VulnFlag" + conf.VulnFlag)
-
 	var payloadComp = strings.TrimSuffix(sb.String(), ",")
 	payload.WriteString("{\"component_details\":[" + payloadComp + "]}")
 
 	log.Debug("Payload ::::" + payload.String())
 
-	rtDetails, err := GetRtDetails(c)
-	url := GetXrayRestAPIUrl(err, rtDetails)
+	url, err := utils.BuildArtifactoryUrl(strings.ReplaceAll(rtDetails.GetUrl(), "/artifactory/", "/xray/"),
+		"api/v1/summary/component", nil)
 	artAuth, err := rtDetails.CreateArtAuthConfig()
 	client, err := httpclient.ClientBuilder().Build()
 	if err != nil {

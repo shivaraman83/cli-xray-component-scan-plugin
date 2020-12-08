@@ -35,13 +35,6 @@ func getScanComponentsFlags() []components.Flag {
 	}
 }
 
-type scanConfiguration struct {
-	componentId string
-	vulnFlag    string
-	licenseFlag string
-	cacheRepo   string
-}
-
 func getScanArguments() []components.Argument {
 	return []components.Argument{
 		{
@@ -65,5 +58,14 @@ func scanComponents(c *components.Context) error {
 		return errors.New("Wrong number of arguments. Expected: String array, " + "Received: " + strconv.Itoa(len(c.Arguments)))
 	}
 	compNames := c.Arguments
-	return scanUtils.ScanPackages(compNames, c)
+	var conf = new(scanUtils.ScanConfiguration)
+	conf.VulnFlag = c.GetStringFlagValue("v")
+	conf.LicenseFlag = c.GetStringFlagValue("l")
+
+	rtDetails, err := scanUtils.GetRtDetails(c)
+	if err != nil {
+		return err
+	}
+
+	return scanUtils.ScanPackages(compNames, conf, rtDetails)
 }
