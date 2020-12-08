@@ -18,7 +18,7 @@ Uninstalling a plugin
 
 
 ## Component Identifiers
-The plugin requires the component id's to be passed as per the format displayed  [here]https://www.jfrog.com/confluence/display/JFROG/Xray+REST+API#XrayRESTAPI-ComponentIdentifiers
+The plugin requires the component id's to be passed as per the format displayed  here- https://www.jfrog.com/confluence/display/JFROG/Xray+REST+API#XrayRESTAPI-ComponentIdentifiers
 
 
 
