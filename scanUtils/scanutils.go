@@ -74,7 +74,7 @@ func GetRtDetails(c *components.Context) (*config.ArtifactoryDetails, error) {
 
 func PrintGeneral(scanData ScanOutput, i int) error {
 	general, err := json.MarshalIndent(scanData.Artifacts[i].General, "", " ")
-	fmt.Println("General:::: " + string(general))
+	fmt.Println("\"general\" : " + string(general))
 	if err != nil {
 		return err
 	}
@@ -83,7 +83,7 @@ func PrintGeneral(scanData ScanOutput, i int) error {
 
 func PrintIssues(scanData ScanOutput, i int) error {
 	issues, err := json.MarshalIndent(scanData.Artifacts[i].Issues, "", " ")
-	fmt.Println("Vulnerabilties:::: " + string(issues))
+	fmt.Println("\"vulnerabilities\" : " + string(issues))
 	if err != nil {
 		return err
 	}
@@ -95,7 +95,7 @@ func PrintOnlyValidVulnerabilities(scanData ScanOutput, i int) error {
 	iss := scanData.Artifacts[i].Issues
 	for j := range iss {
 		if iss[j].Severity != "" {
-			fmt.Println("Vulnerabilties:::: " + string(issues))
+			fmt.Println("\"vulnerabilities\" : " + string(issues))
 		}
 	}
 	if err != nil {
@@ -106,7 +106,7 @@ func PrintOnlyValidVulnerabilities(scanData ScanOutput, i int) error {
 
 func PrintLicenses(scanData ScanOutput, i int) error {
 	licenses, err := json.MarshalIndent(scanData.Artifacts[i].Licenses, "", " ")
-	fmt.Println("Licenses:::: " + string(licenses))
+	fmt.Println("\"licenses\" : " + string(licenses))
 	if err != nil {
 		return err
 	}
@@ -191,18 +191,30 @@ func ScanPackages(compNames []string, c *components.Context) error {
 
 func PrintOutput(conf *ScanConfiguration, scanData ScanOutput, err error) error {
 
-	b, _ := json.MarshalIndent(scanData, "", " ")
-	fmt.Println(string(b))
+	//_, _ = json.MarshalIndent(scanData, "", " ")
+	//fmt.Println(string(b))
 
+	first := true
 	if conf.LicenseFlag == "" && conf.VulnFlag == "" {
+		fmt.Println("[")
 		for i := range scanData.Artifacts {
+			if !first{
+				fmt.Println(",")
+			} else {
+				first = false
+			}
+			fmt.Println("{")
 			err := PrintGeneral(scanData, i)
+			fmt.Println(",")
 			err = PrintIssues(scanData, i)
+			fmt.Println(",")
 			err = PrintLicenses(scanData, i)
+			fmt.Println("}")
 			if err != nil {
 				return err
 			}
 		}
+		fmt.Println("]")
 	}
 
 	if conf.VulnFlag == "all" {
