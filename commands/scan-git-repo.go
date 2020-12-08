@@ -23,7 +23,6 @@ func ScanGitRepo() components.Command {
 		Aliases:     []string{"sgr"},
 		Arguments:   getScanArguments(),
 		Flags:       getScanFlagsForGit(),
-		//EnvVars:     getHelloEnvVar(),
 		Action: func(c *components.Context) error {
 			return scanGit(c)
 		},
@@ -68,7 +67,6 @@ func scanGit(c *components.Context) error {
 	conf.componentId = c.Arguments[0]
 	conf.cacheRepo = c.GetStringFlagValue("cacheRepo")
 
-	//Invoke the process to get the list of gomodules
 	cacheFolder := c.Arguments[1]
 
 	if c.GetBoolFlagValue("downloadCache") {
