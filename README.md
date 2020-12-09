@@ -60,8 +60,8 @@ The plugin requires the component id's to be passed as per the format displayed 
    $ jfrog xray-scan scan-git-repo --downloadCache=true --v all http://github.com/cockroachdb/cockroach "/Users/sivas/Workspace/plugin-cache"
    $ jfrog xray-scan scan-git-repo --downloadCache=true --l all http://github.com/cockroachdb/cockroach "/Users/sivas/Workspace/plugin-cache"
    ```
-   Since the output is a json payload, you can easily modify the output structure as per your preference and you can write your own automation with it using this plugin
-        - Example:
+   Since the output is a json payload, you can easily modify the output structure as per your preference and you can write your own automation with it using this plugin. Below is an example where we are using jQuery to fetch only the required information.
+     - Example: 
    ```
    $ jfrog xray-scan scan-git-repo https://github.com/cockroachdb/cockroach "/Users/sivas/Workspace/plugin-cache" | jq '.[] | select(.vulnerabilities[] | .severity |contains("High")) | { cid: .general.component_id , cves: (.vulnerabilities[].cves[].cvss_v2), fixed: (.vulnerabilities[].components[].fixed_versions) }'
    
