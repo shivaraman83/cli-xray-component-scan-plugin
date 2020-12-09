@@ -60,6 +60,28 @@ The plugin requires the component id's to be passed as per the format displayed 
    $ jfrog xray-scan scan-git-repo --downloadCache=true --v all http://github.com/cockroachdb/cockroach "/Users/sivas/Workspace/plugin-cache"
    $ jfrog xray-scan scan-git-repo --downloadCache=true --l all http://github.com/cockroachdb/cockroach "/Users/sivas/Workspace/plugin-cache"
    ```
+   Since the output is a json payload, you can easily modify the output structure as per your preference and you can write your own automation with it using this plugin
+        - Example:
+   ```
+   $ jfrog xray-scan scan-git-repo https://github.com/cockroachdb/cockroach "/Users/sivas/Workspace/plugin-cache" | jq '.[] | select(.vulnerabilities[] | .severity |contains("High")) | { cid: .general.component_id , cves: (.vulnerabilities[].cves[].cvss_v2), fixed: (.vulnerabilities[].components[].fixed_versions) }'
+   
+   Output :
+   {
+     "cid": "github.com/apache/thrift:0.0.0-20181211084444-2b7365c54f82",
+     "cves": "7.8/CVSS:2.0/AV:N/AC:L/Au:N/C:N/I:N/A:C",
+     "fixed": [
+       "[0.13.0]"
+     ]
+   }
+   {
+     "cid": "github.com/google/flatbuffers:1.11.0",
+     "cves": "7.6/AV:N/AC:H/Au:N/C:C/I:C/A:C",
+     "fixed": [
+       "[1.12.0]"
+     ]
+   }
+
+   ```
    https://git.jfrog.info/projects/DEVOA/repos/magic/browse - Contains the code which scans a Github URL containing a Go Lang project and returns the dependency tree
 
 ### Environment variables
