@@ -4,18 +4,16 @@ import (
 	"errors"
 	"github.com/jfrog/jfrog-cli-core/plugins/components"
 	"github.com/jfrog/jfrog-cli-plugin-template/scanUtils"
+	"github.com/jfrog/jfrog-client-go/artifactory"
 	"github.com/jfrog/jfrog-client-go/artifactory/services"
+	rtConfig "github.com/jfrog/jfrog-client-go/config"
 	"github.com/mholt/archiver"
 	"io/ioutil"
 	"log"
 	"os"
 	"os/exec"
-	//"github.com/kr/pretty"
-	"github.com/jfrog/jfrog-client-go/artifactory"
-	rtConfig "github.com/jfrog/jfrog-client-go/config"
 	"strconv"
 	"strings"
-	//"time"
 )
 
 func ScanGitRepo() components.Command {
@@ -25,7 +23,6 @@ func ScanGitRepo() components.Command {
 		Aliases:     []string{"sgr"},
 		Arguments:   getScanArguments(),
 		Flags:       getScanFlagsForGit(),
-		//EnvVars:     getHelloEnvVar(),
 		Action: func(c *components.Context) error {
 			return scanGit(c)
 		},
@@ -66,17 +63,17 @@ func scanGit(c *components.Context) error {
 	if len(c.Arguments) != 2 {
 		return errors.New("Wrong number of arguments. Expected: 2, " + "Received: " + strconv.Itoa(len(c.Arguments)))
 	}
-	var conf = new(scanConfiguration)
-	conf.componentId = c.Arguments[0]
-	conf.cacheRepo = c.GetStringFlagValue("cacheRepo")
-
-	//Invoke the process to get the list of gomodules
+	var conf = new(scanUtils.ScanConfiguration)
+	//conf.ComponentId = c.Arguments[0]
+	conf.CacheRepo = c.GetStringFlagValue("cacheRepo")
+	conf.VulnFlag = c.GetStringFlagValue("v")
+	conf.LicenseFlag = c.GetStringFlagValue("l")
 	cacheFolder := c.Arguments[1]
 
 	if c.GetBoolFlagValue("downloadCache") {
-		err2 := downloadCache(c, cacheFolder)
-		if err2 != nil {
-			return err2
+		err := downloadCache(c, cacheFolder)
+		if err != nil {
+			return err
 		}
 	}
 
@@ -88,16 +85,22 @@ func scanGit(c *components.Context) error {
 	_ = magicIn.Close()
 	magicBytes, _ := ioutil.ReadAll(magicOut)
 	_ = magicCmd.Wait()
-	//After the list of Strings are received, please pass it to scanPackages(compNames []string)
 	result := string(magicBytes)
 
 	if c.GetBoolFlagValue("updateCache") {
-		err2 := uploadCache(c, cacheFolder)
-		if err2 != nil {
-			return err2
+		err := uploadCache(c, cacheFolder)
+		if err != nil {
+			return err
 		}
 	}
-	return scanUtils.ScanPackages(strings.Split(strings.TrimSuffix(result, "\n"), "\n"), c)
+
+	rtDetails, err := scanUtils.GetRtDetails(c)
+
+	if err != nil {
+		return err
+	}
+
+	return scanUtils.ScanPackages(strings.Split(strings.TrimSuffix(result, "\n"), "\n"), conf, rtDetails)
 }
 
 func downloadCache(c *components.Context, cacheFolder string) error {

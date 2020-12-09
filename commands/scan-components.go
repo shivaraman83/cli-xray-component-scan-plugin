@@ -8,22 +8,20 @@ import (
 	//"time"
 )
 
-func ScanPackages() components.Command {
-	//var compNames = []string{"deb://debian:buster:curl:7.64.0-4", "npm://debug:2.2.0", "go://github.com/ulikunitz/xz:0.5.6"}
+func ScanComponents() components.Command {
 	return components.Command{
 		Name:        "scan-components",
 		Description: "Scans a list of Packages/Components using Xray",
 		Aliases:     []string{"sc"},
-		Arguments:   getScanPackagesArguments(),
-		Flags:       getScanPackagesFlags(),
-		//EnvVars:     getHelloEnvVar(),
+		Arguments:   getScanComponentsArguments(),
+		Flags:       getScanComponentsFlags(),
 		Action: func(c *components.Context) error {
-			return scanPackageList(c)
+			return scanComponents(c)
 		},
 	}
 }
 
-func getScanPackagesFlags() []components.Flag {
+func getScanComponentsFlags() []components.Flag {
 	return []components.Flag{
 		components.StringFlag{
 			Name: "v",
@@ -37,7 +35,16 @@ func getScanPackagesFlags() []components.Flag {
 	}
 }
 
-func getScanPackagesArguments() []components.Argument {
+func getScanArguments() []components.Argument {
+	return []components.Argument{
+		{
+			Name:        "Component Name",
+			Description: "Name of the components(String of arrays) which Xray has to scan",
+		},
+	}
+}
+
+func getScanComponentsArguments() []components.Argument {
 	return []components.Argument{
 		{
 			Name:        "Component Name",
@@ -46,10 +53,19 @@ func getScanPackagesArguments() []components.Argument {
 	}
 }
 
-func scanPackageList(c *components.Context) error {
+func scanComponents(c *components.Context) error {
 	if len(c.Arguments) == 0 {
 		return errors.New("Wrong number of arguments. Expected: String array, " + "Received: " + strconv.Itoa(len(c.Arguments)))
 	}
 	compNames := c.Arguments
-	return scanUtils.ScanPackages(compNames, c)
+	var conf = new(scanUtils.ScanConfiguration)
+	conf.VulnFlag = c.GetStringFlagValue("v")
+	conf.LicenseFlag = c.GetStringFlagValue("l")
+
+	rtDetails, err := scanUtils.GetRtDetails(c)
+	if err != nil {
+		return err
+	}
+
+	return scanUtils.ScanPackages(compNames, conf, rtDetails)
 }

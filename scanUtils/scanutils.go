@@ -17,10 +17,9 @@ import (
 const ServerIdFlag = "server-id"
 
 type ScanConfiguration struct {
-	ComponentId string
 	VulnFlag    string
 	LicenseFlag string
-	cacheRepo   string
+	CacheRepo   string
 }
 
 type ScanOutput struct {
@@ -113,12 +112,6 @@ func PrintLicenses(scanData ScanOutput, i int) error {
 	return nil
 }
 
-func GetXrayRestAPIUrl(err error, rtDetails *config.ArtifactoryDetails) string {
-	url, err := utils.BuildArtifactoryUrl(strings.ReplaceAll(rtDetails.GetUrl(), "/artifactory/", "/xray/"),
-		"api/v1/summary/component", nil)
-	return url
-}
-
 func PrintOnlyHighVulnerabilities(scanData ScanOutput) error {
 	for i := range scanData.Artifacts {
 		iss := scanData.Artifacts[i].Issues
@@ -136,28 +129,19 @@ func PrintOnlyHighVulnerabilities(scanData ScanOutput) error {
 	return nil
 }
 
-func ScanPackages(compNames []string, c *components.Context) error {
+func ScanPackages(compNames []string, conf *ScanConfiguration, rtDetails *config.ArtifactoryDetails) error {
 	var sb strings.Builder
 	var payload strings.Builder
 	for _, element := range compNames {
 		sb.WriteString("{\"component_id\":\"" + element + "\"},")
 	}
-
-	var conf = new(ScanConfiguration)
-	conf.ComponentId = c.Arguments[0]
-	conf.VulnFlag = c.GetStringFlagValue("v")
-	conf.LicenseFlag = c.GetStringFlagValue("l")
-
-	log.Debug("LicenseFlag " + conf.LicenseFlag)
-	log.Debug("VulnFlag" + conf.VulnFlag)
-
 	var payloadComp = strings.TrimSuffix(sb.String(), ",")
 	payload.WriteString("{\"component_details\":[" + payloadComp + "]}")
 
 	log.Debug("Payload ::::" + payload.String())
 
-	rtDetails, err := GetRtDetails(c)
-	url := GetXrayRestAPIUrl(err, rtDetails)
+	url, err := utils.BuildArtifactoryUrl(strings.ReplaceAll(rtDetails.GetUrl(), "/artifactory/", "/xray/"),
+		"api/v1/summary/component", nil)
 	artAuth, err := rtDetails.CreateArtAuthConfig()
 	client, err := httpclient.ClientBuilder().Build()
 	if err != nil {
@@ -173,11 +157,6 @@ func ScanPackages(compNames []string, c *components.Context) error {
 	var scanData ScanOutput
 	err = json.Unmarshal(body, &scanData)
 
-	//data := clientutils.IndentJson(body)
-	//scanOutputJSON := make(map[string][]scanOutput)
-	///err = json.Unmarshal([]byte(data), &scanOutputJSON)
-
-	//log.Output(clientutils.IndentJson(body))
 	if err != nil {
 		return err
 	}
@@ -191,14 +170,11 @@ func ScanPackages(compNames []string, c *components.Context) error {
 
 func PrintOutput(conf *ScanConfiguration, scanData ScanOutput, err error) error {
 
-	//_, _ = json.MarshalIndent(scanData, "", " ")
-	//fmt.Println(string(b))
-
 	first := true
 	if conf.LicenseFlag == "" && conf.VulnFlag == "" {
 		fmt.Println("[")
 		for i := range scanData.Artifacts {
-			if !first{
+			if !first {
 				fmt.Println(",")
 			} else {
 				first = false
@@ -219,7 +195,7 @@ func PrintOutput(conf *ScanConfiguration, scanData ScanOutput, err error) error 
 
 	if conf.VulnFlag == "all" {
 		for i := range scanData.Artifacts {
-			err = PrintIssues(scanData, i)
+			err = PrintOnlyValidVulnerabilities(scanData, i)
 			if err != nil {
 				return err
 			}
