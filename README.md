@@ -1,7 +1,7 @@
 # xray-scan
 
 ## About this plugin
-This plugin can scan a component,a list of components(artifact/binaries) or a Golang gitrepo to identify the vulnerabilities and also to provide licensing information using Jfrog Xray.
+This plugin can scan a component,a list of components(artifact/binaries) or a Golang gitrepo to identify any vulnerabilities and also to provide licensing information using Jfrog Xray.
 
 ## Installation with JFrog CLI
 Installing the latest version:
