@@ -83,8 +83,8 @@ The plugin requires the component id's to be passed as per the format displayed 
 
    ```
 ### Dependency
-   This plugin uses this dependency during execution
-   https://git.jfrog.info/projects/DEVOA/repos/magic/browse - Contains the code which scans a Github URL containing a Go Lang project and returns the dependency tree
+   This plugin leverages an haskell code to identify the dependency tree. This Github url
+   https://git.jfrog.info/projects/DEVOA/repos/magic/browse contains the code which scans a Github URL containing a Go Lang project and returns the dependency tree
 
 ### Environment variables
 None.
