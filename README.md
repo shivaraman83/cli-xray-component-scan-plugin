@@ -4,17 +4,14 @@
 This plugin can scan a component,a list of components(artifact/binaries) or a Golang gitrepo to identify any vulnerabilities and also to provide licensing information using Jfrog Xray.
 
 ## Installation with JFrog CLI
-Installing the latest version:
+Since this plugin is currently not included in JFrog CLI Plugins Registry, it needs to be built and installed manually. Follow these steps to install and use this plugin with JFrog CLI.
 
-`$ jfrog plugin install xray-scan`
-
-Installing a specific version:
-
-`$ jfrog plugin install xray-scan@version`
-
-Uninstalling a plugin
-
-`$ jfrog plugin uninstall xray-scan`
+Make sure JFrog CLI is installed on you machine by running jfrog. If it is not installed, install it.
+Create a directory named plugins under ~/.jfrog/ if it does not exist already.
+Clone this repository.
+CD into the root directory of the cloned project.
+Run go build to create the binary in the current directory.
+Copy the binary into the ~/.jfrog/plugins directory.
 
 
 ## Component Identifiers
